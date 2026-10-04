@@ -1,13 +1,15 @@
-# Wollok Game: Título de juego
+# Wollok Game: Cuatro en línea
 
-**Grupo:** Nombre de Grupo
+**Grupo:** LosInmutables
 
 **Integrantes:**
-- Nombre y Apellido
-- Nombre y Apellido
-- Nombre y Apellido
-- Nombre y Apellido
-- Nombre y Apellido
+- Marcos Ortiz Olivero
+- Fermín Orcoyen
+- Fausto Mazzeo
+- Santiago Barcala Roca
+- Juan Muñoz Soerensen
+
+**Repositorio:** https://github.com/pdep-mit/tp-wg-2026-sabiduria-LosInmutables
 
 ## Consignas
 
@@ -24,11 +26,12 @@ Recuerden que para cada checkpoint hay [expectativas mínimas](https://docs.goog
 
 ## Objetivo
 
-TODO
+Cuatro en línea con habilidades especiales: alinear cuatro fichas del propio color antes que el rival.
 
 ## Controles
 
-TODO
+- Teclas `1` a `7`: soltar una ficha en esa columna (de izquierda a derecha).
+- Juegan dos personas por turnos en la misma computadora: empieza el rojo y después el amarillo.
 
 # Explicaciones
 
