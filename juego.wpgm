@@ -9,7 +9,9 @@ program CuatroEnLinea {
 
 	// A, D: desplazar la ficha antes de soltarla
 	keyboard.a().onPressDo({ partida.desplazarIzquierda() })
+	keyboard.left().onPressDo({ partida.desplazarIzquierda() })
 	keyboard.d().onPressDo({ partida.desplazarDerecha()} )
+	keyboard.right().onPressDo({ partida.desplazarDerecha() })
 
 	// Enter: soltar la ficha
 	keyboard.enter().onPressDo({ partida.soltar() })
