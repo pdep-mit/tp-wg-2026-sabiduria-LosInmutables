@@ -20,11 +20,11 @@ class Tablero {
 
   method hayFichaCayendo() = !cayendo.isEmpty()
 
-  // La ficha entra por arriba de la columna (en la fila extra sobre el tablero) y empieza a caer.
+  // La ficha ya estaba flotando en la fila extra sobre el tablero (ya es un visual):
+  // alcanza con confirmar su columna y empezar a hacerla caer.
   method soltar(ficha, columna) {
     ficha.position(game.at(columna, filas))
     cayendo.add(ficha)
-    game.addVisual(ficha)
   }
 
   // Se ejecuta en cada tick: las fichas que llegaron a su fila de aterrizaje se apoyan
