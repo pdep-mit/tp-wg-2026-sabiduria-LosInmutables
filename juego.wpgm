@@ -1,13 +1,27 @@
 import wollok.game.*
-import example.*
+import partida.*
 
-program NombreDeJuego {
-	// TODO: Cambiar esto por lo que necesiten
-	game.title("Grupo: ... | Nombre de jueguito")
-	game.height(10)
-	game.width(10)
+program CuatroEnLinea {
+	game.title("Grupo: LosInmutables | Cuatro en línea")
+	game.height(partida.tablero().filas()+1) // una fila extra arriba, por donde caen las fichas
+	game.width(partida.tablero().columnas())
+	game.boardGround("tablero.png")
 
-	game.addVisual(player)
+	// Teclas 1 a 7: soltar la ficha en mano en esa columna
+	keyboard.num1().onPressDo({ partida.soltarEn(0) })
+	keyboard.num2().onPressDo({ partida.soltarEn(1) })
+	keyboard.num3().onPressDo({ partida.soltarEn(2) })
+	keyboard.num4().onPressDo({ partida.soltarEn(3) })
+	keyboard.num5().onPressDo({ partida.soltarEn(4) })
+	keyboard.num6().onPressDo({ partida.soltarEn(5) })
+	keyboard.num7().onPressDo({ partida.soltarEn(6) })
+
+	// C, F: elegir la ficha en mano (común o fantasma)
+	keyboard.c().onPressDo({ partida.elegirComun() })
+	keyboard.f().onPressDo({ partida.elegirFantasma() })
+
+	// Evento temporal: las fichas que están cayendo bajan una celda por tick
+	game.onTick(100, "caida", { partida.tablero().avanzarCaida() })
 
 	game.start()
 }
