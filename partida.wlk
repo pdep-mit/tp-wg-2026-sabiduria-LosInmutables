@@ -12,21 +12,57 @@ object partida {
   const jugadorAmarillo = new Jugador(color = "amarillo")
   var jugadorActual = jugadorRojo
   var property fichaEnMano = new Ficha(jugador = jugadorRojo)
+  // Columna sobre la que "flota" la ficha en mano (fila extra, arriba del tablero).
+  var columnaActual = 3
 
   method jugadorActual() = jugadorActual
 
+  // Se llama desde el program, antes de game.start(): muestra la primera ficha flotando.
+  method iniciar() {
+    self.ponerEnMano(fichaEnMano)
+  }
+
+  // Deja la ficha como la que está en mano y la muestra flotando en la columna actual.
+  method ponerEnMano(ficha) {
+    fichaEnMano = ficha
+    self.actualizarPosicionDeFichaEnMano()
+    game.addVisual(fichaEnMano)
+  }
+
+  method actualizarPosicionDeFichaEnMano() {
+    fichaEnMano.position(game.at(columnaActual, tablero.filas()))
+  }
+
+  // Cambiar de tipo de ficha: se saca la que flotaba y se pone la nueva en el mismo lugar.
   method elegirComun() {
-    fichaEnMano = new Ficha(jugador = jugadorActual)
+    game.removeVisual(fichaEnMano)
+    self.ponerEnMano(new Ficha(jugador = jugadorActual))
   }
 
   method elegirFantasma() {
-    fichaEnMano = new FichaFantasma(jugador = jugadorActual)
+    game.removeVisual(fichaEnMano)
+    self.ponerEnMano(new FichaFantasma(jugador = jugadorActual))
+  }
+
+  // Mover la ficha flotante sin salirse del tablero.
+  method desplazarIzquierda() {
+    if (columnaActual > 0) {
+      columnaActual = columnaActual - 1
+      self.actualizarPosicionDeFichaEnMano()
+    }
+  }
+
+  method desplazarDerecha() {
+    if (columnaActual < tablero.columnas() - 1) {
+      columnaActual = columnaActual + 1
+      self.actualizarPosicionDeFichaEnMano()
+    }
   }
 
   // Si hay una ficha cayendo o la columna está llena no se puede soltar y el turno no pasa.
-  method soltarEn(columna) {
-    if (!tablero.hayFichaCayendo() && !tablero.columnaLlena(columna)) {
-      tablero.soltar(fichaEnMano, columna)
+  method soltar() {
+    if (!tablero.hayFichaCayendo() && !tablero.columnaLlena(columnaActual)) {
+      tablero.soltar(fichaEnMano, columnaActual)
       self.pasarTurno()
     }
   }
@@ -37,6 +73,6 @@ object partida {
     } else {
       jugadorActual = jugadorRojo
     }
-    self.elegirComun()
+    self.ponerEnMano(new Ficha(jugador = jugadorActual))
   }
 }

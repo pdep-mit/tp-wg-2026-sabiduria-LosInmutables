@@ -3,18 +3,18 @@ import partida.*
 
 program CuatroEnLinea {
 	game.title("Grupo: LosInmutables | Cuatro en línea")
-	game.height(partida.tablero().filas()+1) // una fila extra arriba, por donde caen las fichas
 	game.width(partida.tablero().columnas())
+	game.height(partida.tablero().filas() + 1) // una fila extra arriba: de ahí caen las fichas
 	game.boardGround("tablero.png")
 
-	// Teclas 1 a 7: soltar la ficha en mano en esa columna
-	keyboard.num1().onPressDo({ partida.soltarEn(0) })
-	keyboard.num2().onPressDo({ partida.soltarEn(1) })
-	keyboard.num3().onPressDo({ partida.soltarEn(2) })
-	keyboard.num4().onPressDo({ partida.soltarEn(3) })
-	keyboard.num5().onPressDo({ partida.soltarEn(4) })
-	keyboard.num6().onPressDo({ partida.soltarEn(5) })
-	keyboard.num7().onPressDo({ partida.soltarEn(6) })
+	// A, D: desplazar la ficha antes de soltarla
+	keyboard.a().onPressDo({ partida.desplazarIzquierda() })
+	keyboard.left().onPressDo({ partida.desplazarIzquierda() })
+	keyboard.d().onPressDo({ partida.desplazarDerecha()} )
+	keyboard.right().onPressDo({ partida.desplazarDerecha() })
+
+	// Enter: soltar la ficha
+	keyboard.enter().onPressDo({ partida.soltar() })
 
 	// C, F: elegir la ficha en mano (común o fantasma)
 	keyboard.c().onPressDo({ partida.elegirComun() })
@@ -23,5 +23,6 @@ program CuatroEnLinea {
 	// Evento temporal: las fichas que están cayendo bajan una celda por tick
 	game.onTick(100, "caida", { partida.tablero().avanzarCaida() })
 
+	game.schedule(1, { partida.iniciar() })
 	game.start()
 }
