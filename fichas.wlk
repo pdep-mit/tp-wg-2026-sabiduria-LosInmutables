@@ -1,39 +1,68 @@
-// Todavía no vimos herencia, así que la común y la fantasma son dos clases independientes.
-// El polimorfismo sale de que las dos entienden los mismos mensajes (filaDeAterrizajeEn,
-// reemplazaAlAterrizar, bajar, image) y cada una responde a su manera.
+import wollok.game.*
 
-// Ficha común: cae por la columna y, cuando llega a su fila de aterrizaje, queda apoyada
-// (aterriza en la primera fila libre, arriba de la pila).
+// Ficha: lo que tienen en común todas las fichas (jugador, posición y la mecánica de caer).
+// No se crea directamente: se usan FichaComun o FichaFantasma, que se diferencian en
+// `image` y en `filaDeAterrizajeEn`, cada una a su manera (polimorfismo).
+//
+// La ficha se encarga de su propia caída: le pregunta al tablero cuántas fichas hay en su
+// columna, decide hasta qué fila tiene que bajar, baja sola y, al llegar, avisa que se apoyó.
 class Ficha {
   const property jugador
   var property position = null
+  var cayendo = false
+  const milisegundosPorCelda = 100
 
-  method image() = "comun-" + jugador.color() + ".png"
+  method estaCayendo() = cayendo
+
+  method estaApoyada() = !cayendo
+
+  method estaEnColumna(columna) = position.x() == columna
+
+  method estaEn(otraPosicion) = position.x() == otraPosicion.x() && position.y() == otraPosicion.y()
+
+  // Cantidad de fichas apoyadas en la columna sobre la que está la ficha.
+  method alturaDeSuColumnaEn(tablero) = tablero.alturaDe(position.x())
+
+  method imagenDe(tipo) = tipo + "-" + jugador.color() + ".png"
 
   method bajar() {
     position = position.down(1)
   }
 
-  method filaDeAterrizajeEn(pila) = pila.size()
+  // Empieza a caer hasta la fila indicada.
+  method caerHasta(fila, tablero) {
+    cayendo = true
+    self.avanzarHasta(fila, tablero)
+  }
 
-  method reemplazaAlAterrizar(pila) = false
+  // Baja una celda y programa el siguiente paso; al llegar a su fila, se apoya.
+  method avanzarHasta(fila, tablero) {
+    if (position.y() > fila) {
+      self.bajar()
+      game.schedule(milisegundosPorCelda, { self.avanzarHasta(fila, tablero) })
+    } else {
+      cayendo = false
+      tablero.apoyar(self)
+    }
+  }
+}
+
+// Ficha común: queda apoyada arriba de las fichas que ya hay en la columna.
+class FichaComun inherits Ficha {
+  method image() = self.imagenDe("comun")
+
+  method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
 }
 
 // Ficha fantasma: atraviesa las primeras `atraviesa` fichas de la columna (contando desde arriba)
-// y reemplaza la que encuentra en esa posición. Si la columna no tiene tantas fichas, cae como una común.
-class FichaFantasma {
-  const property jugador
-  var property position = null
+// y reemplaza la que encuentra. Si la columna no tiene más de `atraviesa` fichas, cae como una común.
+class FichaFantasma inherits Ficha {
   const atraviesa = 2
 
-  method image() = "fantasma-" + jugador.color() + ".png"
+  method image() = self.imagenDe("fantasma")
 
-  method bajar() {
-    position = position.down(1)
+  method filaDeAterrizajeEn(tablero) {
+    const altura = self.alturaDeSuColumnaEn(tablero)
+    return if (altura > atraviesa) altura - 1 - atraviesa else altura
   }
-
-  method filaDeAterrizajeEn(pila) =
-    if (self.reemplazaAlAterrizar(pila)) pila.size() - 1 - atraviesa else pila.size()
-
-  method reemplazaAlAterrizar(pila) = pila.size() > atraviesa
 }

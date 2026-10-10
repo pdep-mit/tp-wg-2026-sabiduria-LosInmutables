@@ -11,7 +11,7 @@ object partida {
   const jugadorRojo = new Jugador(color = "rojo")
   const jugadorAmarillo = new Jugador(color = "amarillo")
   var jugadorActual = jugadorRojo
-  var property fichaEnMano = new Ficha(jugador = jugadorRojo)
+  var property fichaEnMano = new FichaComun(jugador = jugadorRojo)
   // Columna sobre la que "flota" la ficha en mano (fila extra, arriba del tablero).
   var columnaActual = 3
 
@@ -36,7 +36,7 @@ object partida {
   // Cambiar de tipo de ficha: se saca la que flotaba y se pone la nueva en el mismo lugar.
   method elegirComun() {
     game.removeVisual(fichaEnMano)
-    self.ponerEnMano(new Ficha(jugador = jugadorActual))
+    self.ponerEnMano(new FichaComun(jugador = jugadorActual))
   }
 
   method elegirFantasma() {
@@ -73,6 +73,6 @@ object partida {
     } else {
       jugadorActual = jugadorRojo
     }
-    self.ponerEnMano(new Ficha(jugador = jugadorActual))
+    self.ponerEnMano(new FichaComun(jugador = jugadorActual))
   }
 }

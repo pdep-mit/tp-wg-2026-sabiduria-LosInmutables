@@ -20,9 +20,6 @@ program CuatroEnLinea {
 	keyboard.c().onPressDo({ partida.elegirComun() })
 	keyboard.f().onPressDo({ partida.elegirFantasma() })
 
-	// Evento temporal: las fichas que están cayendo bajan una celda por tick
-	game.onTick(100, "caida", { partida.tablero().avanzarCaida() })
-
 	game.schedule(1, { partida.iniciar() })
 	game.start()
 }
