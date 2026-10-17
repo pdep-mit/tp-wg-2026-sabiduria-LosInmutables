@@ -10,7 +10,10 @@ class Ficha {
   const property jugador
   var property position = null
   var cayendo = false
-  const milisegundosPorCelda = 100
+  // El motor de Wollok redondea la posición a celda entera antes de dibujarla, así que
+  // la caída no puede deslizarse: como mucho se puede elegir qué tan pausado va, celda
+  // a celda. Este es el único número para ajustar esa pausa.
+  const milisegundosPorCelda = 200
 
   method estaCayendo() = cayendo
 
@@ -41,9 +44,13 @@ class Ficha {
       self.bajar()
       game.schedule(milisegundosPorCelda, { self.avanzarHasta(fila, tablero) })
     } else {
-      cayendo = false
-      tablero.apoyar(self)
+      self.aterrizar(tablero)
     }
+  }
+
+  method aterrizar(tablero) {
+    cayendo = false
+    tablero.apoyar(self)
   }
 }
 

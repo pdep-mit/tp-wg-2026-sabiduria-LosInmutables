@@ -20,6 +20,9 @@ program CuatroEnLinea {
 	keyboard.c().onPressDo({ partida.elegirComun() })
 	keyboard.f().onPressDo({ partida.elegirFantasma() })
 
+	// R: reiniciar la partida (solo tiene efecto real una vez que alguien ganó)
+	keyboard.r().onPressDo({ partida.reiniciar() })
+
 	game.schedule(1, { partida.iniciar() })
 	game.start()
 }
