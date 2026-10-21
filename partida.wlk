@@ -80,7 +80,7 @@ object partida {
   // Si hay una ficha cayendo o la columna está llena no se puede soltar y el turno no pasa.
   // Si ya hay ganador, jugando() corta todo antes de llegar a mirar esto.
   method soltar() {
-    if (self.jugando() && !tablero.hayFichaCayendo() && !tablero.columnaLlena(columnaActual)) {
+    if (self.jugando() && !tablero.hayFichaCayendo() && (!tablero.columnaLlena(columnaActual)||fichaEnMano.esFichaFantasma())) {
       tablero.soltar(fichaEnMano, columnaActual)
       self.pasarTurno()
     }
