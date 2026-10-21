@@ -30,8 +30,11 @@ Cuatro en línea con habilidades especiales: alinear cuatro fichas del propio co
 
 ## Controles
 
-- Teclas `1` a `7`: soltar una ficha en esa columna (de izquierda a derecha).
-- Juegan dos personas por turnos en la misma computadora: empieza el rojo y después el amarillo.
+- Flechas o `A`/`D`: mover la ficha en mano a lo largo de la fila de arriba, sin salirse del tablero.
+- `Enter`: soltar la ficha en mano en la columna donde está.
+- `C`/`F`: elegir el tipo de ficha en mano (común o fantasma).
+
+Juegan dos personas por turnos en la misma computadora: empieza el rojo y después el amarillo. Mientras una ficha está cayendo no se puede soltar otra, y una vez que alguien hace cuatro en línea la partida termina.
 
 # Explicaciones
 

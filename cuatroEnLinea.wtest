@@ -1,0 +1,244 @@
+import wollok.game.*
+import tablero.*
+import fichas.*
+import partida.*
+
+describe "Fichas en el tablero" {
+  const rojo = new Jugador(color = "rojo")
+  const amarillo = new Jugador(color = "amarillo")
+  const tablero = new Tablero()
+
+  // Las fichas caen solas con game.schedule, que depende del loop del juego real (no corre en
+  // los tests). Por eso, para probar la lógica de dominio, se simula que la ficha ya cayó: se
+  // la deja en la columna, se le pregunta a ella misma en qué fila le toca aterrizar —la misma
+  // cuenta que haría cayendo— y se la apoya ahí. Es lo mismo que hace el juego, sin la animación.
+  method colocar(ficha, columna) {
+    ficha.position(game.at(columna, tablero.filas()))
+    ficha.position(game.at(columna, ficha.filaDeAterrizajeEn(tablero)))
+    tablero.agregar(ficha)
+    ficha.aterrizar(tablero)
+  }
+
+  test "una ficha común aterrizada queda apoyada en su columna" {
+    const ficha = new FichaComun(jugador = rojo)
+    self.colocar(ficha, 3)
+    assert.that(ficha.estaApoyada())
+    assert.equals([ficha], tablero.fichasApoyadasEn(3))
+    assert.equals(1, tablero.alturaDe(3))
+  }
+
+  test "la fantasma reemplaza a la ficha que encuentra en su celda, sin afectar a las demás" {
+    const a = new FichaComun(jugador = rojo)
+    const b = new FichaComun(jugador = rojo)
+    const c = new FichaComun(jugador = rojo)
+    self.colocar(a, 3)
+    self.colocar(b, 3)
+    self.colocar(c, 3) // columna con altura 3: la próxima fantasma ya puede atravesar sus 2 y reemplazar
+    const fantasma = new FichaFantasma(jugador = amarillo)
+    self.colocar(fantasma, 3)
+    assert.equals([b, c, fantasma], tablero.fichasApoyadasEn(3))
+  }
+
+  test "si la columna no tiene suficientes fichas para atravesar, la fantasma cae como una común" {
+    self.colocar(new FichaComun(jugador = rojo), 3)
+    const fantasma = new FichaFantasma(jugador = amarillo)
+    self.colocar(fantasma, 3)
+    assert.equals(2, tablero.alturaDe(3))
+    assert.equals(1, fantasma.position().y())
+  }
+
+  test "el mismo mensaje filaDeAterrizajeEn da una fila distinta según el tipo de ficha" {
+    3.times({ n => self.colocar(new FichaComun(jugador = rojo), 4) }) // columna con altura 3
+    const comun = new FichaComun(jugador = rojo)
+    const fantasma = new FichaFantasma(jugador = rojo)
+    comun.position(game.at(4, tablero.filas()))
+    fantasma.position(game.at(4, tablero.filas()))
+    assert.equals([3, 0], [comun, fantasma].map({ ficha => ficha.filaDeAterrizajeEn(tablero) }))
+  }
+}
+
+describe "Detección de ganador" {
+  const rojo = new Jugador(color = "rojo")
+  const amarillo = new Jugador(color = "amarillo")
+  const tablero = new Tablero()
+
+  method colocar(ficha, columna) {
+    ficha.position(game.at(columna, tablero.filas()))
+    ficha.position(game.at(columna, ficha.filaDeAterrizajeEn(tablero)))
+    tablero.agregar(ficha)
+    ficha.aterrizar(tablero)
+  }
+
+  // Apila fichas de relleno (de cualquier jugador) para que la ficha real quede a la altura
+  // pedida: en Cuatro en línea una ficha nunca "flota", así que para probar una diagonal hay
+  // que apoyarla sobre algo, igual que en una partida real.
+  method apilarRellenoYColocar(columna, cantidadDeRelleno, fichaReal) {
+    cantidadDeRelleno.times({ n => self.colocar(new FichaComun(jugador = amarillo), columna) })
+    self.colocar(fichaReal, columna)
+  }
+
+  test "sin cuatro en línea, nadie ganó" {
+    self.colocar(new FichaComun(jugador = rojo), 0)
+    self.colocar(new FichaComun(jugador = rojo), 1)
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    assert.notThat(tablero.hayGanador())
+  }
+
+  test "cuatro en línea horizontal" {
+    self.colocar(new FichaComun(jugador = rojo), 0)
+    self.colocar(new FichaComun(jugador = rojo), 1)
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    assert.notThat(tablero.hayGanador())
+    self.colocar(new FichaComun(jugador = rojo), 3)
+    assert.that(tablero.hayGanador())
+    assert.equals(rojo, tablero.ganador())
+  }
+
+  test "la horizontal también se arma con fichas de los dos lados de la última que cae" {
+    self.colocar(new FichaComun(jugador = rojo), 1)
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    self.colocar(new FichaComun(jugador = rojo), 4)
+    assert.notThat(tablero.hayGanador())
+    self.colocar(new FichaComun(jugador = rojo), 3) // completa el 4 en línea por el medio
+    assert.that(tablero.hayGanador())
+  }
+
+  test "cuatro en línea vertical" {
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    assert.notThat(tablero.hayGanador())
+    self.colocar(new FichaComun(jugador = rojo), 2)
+    assert.that(tablero.hayGanador())
+    assert.equals(rojo, tablero.ganador())
+  }
+
+  test "cuatro en línea diagonal ascendente" {
+    self.colocar(new FichaComun(jugador = rojo), 0)                                 // fila 0
+    self.apilarRellenoYColocar(1, 1, new FichaComun(jugador = rojo))               // fila 1
+    self.apilarRellenoYColocar(2, 2, new FichaComun(jugador = rojo))               // fila 2
+    assert.notThat(tablero.hayGanador())
+    self.apilarRellenoYColocar(3, 3, new FichaComun(jugador = rojo))               // fila 3: completa
+    assert.that(tablero.hayGanador())
+  }
+
+  test "cuatro en línea diagonal descendente" {
+    self.apilarRellenoYColocar(0, 3, new FichaComun(jugador = rojo))               // fila 3
+    self.apilarRellenoYColocar(1, 2, new FichaComun(jugador = rojo))               // fila 2
+    self.apilarRellenoYColocar(2, 1, new FichaComun(jugador = rojo))               // fila 1
+    assert.notThat(tablero.hayGanador())
+    self.colocar(new FichaComun(jugador = rojo), 3)                                 // fila 0: completa
+    assert.that(tablero.hayGanador())
+  }
+
+  test "fichas de otro jugador no suman para el cuatro en línea" {
+    self.colocar(new FichaComun(jugador = rojo), 0)
+    self.colocar(new FichaComun(jugador = rojo), 1)
+    self.colocar(new FichaComun(jugador = amarillo), 2)
+    self.colocar(new FichaComun(jugador = rojo), 3)
+    assert.notThat(tablero.hayGanador())
+  }
+}
+
+describe "Partida" {
+  test "los turnos alternan y cada ficha es del jugador que la soltó" {
+    const primero = partida.jugadorActual()
+    const ficha = partida.fichaEnMano()
+    partida.soltar()
+    ficha.position(game.at(ficha.position().x(), ficha.filaDeAterrizajeEn(partida.tablero())))
+    ficha.aterrizar(partida.tablero())
+
+    assert.notEquals(primero, partida.jugadorActual())
+    assert.equals(primero, ficha.jugador())
+  }
+
+  test "la ficha en mano no se puede mover más allá del borde izquierdo del tablero" {
+    partida.tablero().columnas().times({ n => partida.desplazarIzquierda() }) // de sobra para llegar al borde
+    assert.equals(0, partida.fichaEnMano().position().x())
+    partida.desplazarIzquierda() // ya está en el borde, no se mueve más
+    assert.equals(0, partida.fichaEnMano().position().x())
+  }
+
+  test "una vez que hay ganador, soltar ya no hace nada" {
+    const tablero = partida.tablero()
+    const ganador = partida.jugadorActual()
+    // Se arma un 4 en línea horizontal directo en el tablero de la partida, con el jugador
+    // que tiene el turno, para no depender de ir moviendo la ficha en mano columna por columna.
+    [0, 1, 2, 3].forEach({ columna =>
+      const ficha = new FichaComun(jugador = ganador)
+      ficha.position(game.at(columna, 0))
+      tablero.agregar(ficha)
+      ficha.aterrizar(tablero)
+    })
+    assert.that(tablero.hayGanador())
+    const alturaPrevia = tablero.alturaDe(3) // la columna sobre la que está la ficha en mano
+
+    partida.soltar()
+
+    assert.equals(alturaPrevia, tablero.alturaDe(3))
+    assert.notThat(tablero.hayFichaCayendo())
+  }
+
+  test "una vez que hay ganador, tampoco se puede mover ni cambiar la ficha en mano" {
+    partida.desplazarDerecha() // fuerza a que la ficha en mano ya tenga una posición asignada
+    const tablero = partida.tablero()
+    const ganador = partida.jugadorActual()
+    [0, 1, 2, 3].forEach({ columna =>
+      const ficha = new FichaComun(jugador = ganador)
+      ficha.position(game.at(columna, 0))
+      tablero.agregar(ficha)
+      ficha.aterrizar(tablero)
+    })
+    assert.that(tablero.hayGanador())
+    const fichaPrevia = partida.fichaEnMano()
+    const columnaPrevia = fichaPrevia.position().x()
+
+    partida.desplazarIzquierda()
+    partida.desplazarDerecha()
+    partida.elegirFantasma()
+
+    assert.equals(columnaPrevia, partida.fichaEnMano().position().x())
+    assert.equals(fichaPrevia, partida.fichaEnMano()) // sigue siendo el mismo objeto: elegirFantasma no hizo nada
+  }
+
+  test "reiniciar deja el tablero vacío, sin ganador y el turno otra vez para el rojo" {
+    const tablero = partida.tablero()
+    const rojo = partida.jugadorActual() // al principio de la partida siempre juega el rojo
+    partida.pasarTurno() // ahora el turno es del amarillo
+    const amarillo = partida.jugadorActual()
+    [0, 1, 2, 3].forEach({ columna =>
+      const ficha = new FichaComun(jugador = amarillo)
+      ficha.position(game.at(columna, 0))
+      tablero.agregar(ficha)
+      ficha.aterrizar(tablero)
+    })
+    assert.that(tablero.hayGanador())
+
+    partida.reiniciar()
+
+    assert.notThat(tablero.hayGanador())
+    assert.equals(0, tablero.alturaDe(0))
+    assert.equals(rojo, partida.jugadorActual())
+    assert.equals("comun-rojo.png", partida.fichaEnMano().image())
+  }
+
+  test "después de reiniciar se puede volver a jugar" {
+    const tablero = partida.tablero()
+    [0, 1, 2, 3].forEach({ columna =>
+      const ficha = new FichaComun(jugador = partida.jugadorActual())
+      ficha.position(game.at(columna, 0))
+      tablero.agregar(ficha)
+      ficha.aterrizar(tablero)
+    })
+    partida.reiniciar()
+
+    // soltar() dispara la caída animada (game.schedule), que no corre sola en los tests:
+    // se completa a mano, igual que en el test de turnos de más arriba.
+    const ficha = partida.fichaEnMano()
+    partida.soltar()
+    ficha.position(game.at(ficha.position().x(), ficha.filaDeAterrizajeEn(tablero)))
+    ficha.aterrizar(tablero)
+
+    assert.equals(1, tablero.alturaDe(3))
+  }
+}
