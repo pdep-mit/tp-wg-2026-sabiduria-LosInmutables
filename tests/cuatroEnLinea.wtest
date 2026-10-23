@@ -1,7 +1,7 @@
 import wollok.game.*
-import tablero.*
-import fichas.*
-import partida.*
+import src.tablero.*
+import src.fichas.*
+import src.partida.*
 
 describe "Fichas en el tablero" {
   const rojo = new Jugador(color = "rojo")
