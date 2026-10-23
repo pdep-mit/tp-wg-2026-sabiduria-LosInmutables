@@ -10,9 +10,8 @@ class Ficha {
   const property jugador
   var property position = null
   var cayendo = false
-  // El motor de Wollok redondea la posición a celda entera antes de dibujarla, así que
-  // la caída no puede deslizarse: como mucho se puede elegir qué tan pausado va, celda
-  // a celda. Este es el único número para ajustar esa pausa.
+  
+
   const milisegundosPorCelda = 200
 
   method estaCayendo() = cayendo
@@ -57,7 +56,7 @@ class Ficha {
 // Ficha común: queda apoyada arriba de las fichas que ya hay en la columna.
 class FichaComun inherits Ficha {
   method image() = self.imagenDe("comun")
-
+  method esFichaFantasma() = false
   method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
 }
 
@@ -67,7 +66,7 @@ class FichaFantasma inherits Ficha {
   const atraviesa = 2
 
   method image() = self.imagenDe("fantasma")
-
+  method esFichaFantasma() = true
   method filaDeAterrizajeEn(tablero) {
     const altura = self.alturaDeSuColumnaEn(tablero)
     return if (altura > atraviesa) altura - 1 - atraviesa else altura
