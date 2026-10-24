@@ -1,145 +1,321 @@
+import wollok.game.*
+import partida.*
 
-//------------------[Pantalla]------------------------
-//La idea de esta clase es que controle las imagenes  
-//y elementos que aparecen en las distintas pantallas
-class Pantalla{
-
+//==================[Fondo]==================
+// El fondo es un visual más (a pantalla completa) que muestra el fondo de la pantalla actual.
+// Se agrega UNA sola vez, primero de todos, así todo lo demás se dibuja encima.
+// (game.boardGround no sirve para esto: no se actualiza si se cambia con el juego ya iniciado.)
+object fondoDePantalla {
+  method position() = game.at(0, 0)
+  method image() = navegador.pantallaActual().fondo()
 }
 
-object menuInicial inherits Pantalla {
-    //Aparezca logo, "jugar", "como jugar" uno al lado del otro
-    //Si selecciona jugar va a pantalla seleccion modo
-    //Si selecciona como jugar va a pantalla como jugar
+//==================[Navegador]==================
+// Sabe cuál es la pantalla actual y se encarga de cambiarla.
+// Guarda un historial para poder "volver" a la pantalla anterior.
+object navegador {
+  var pantallaActual = menuInicial
+  const historial = []
+
+  method pantallaActual() = pantallaActual
+
+  method iniciar() {
+    game.addVisual(fondoDePantalla)
+    pantallaActual.mostrar()
+  }
+
+  method irA(pantalla) {
+    historial.add(pantallaActual)
+    self.cambiarA(pantalla)
+  }
+
+  method volver() {
+    if (!historial.isEmpty()) {
+      const anterior = historial.last()
+      historial.remove(anterior)
+      self.cambiarA(anterior)
+    }
+  }
+
+  method irAlInicio() {
+    historial.clear()
+    self.cambiarA(menuInicial)
+  }
+
+  method cambiarA(pantalla) {
+    pantallaActual.ocultar()
+    pantallaActual = pantalla
+    pantallaActual.mostrar()
+  }
 }
 
+//==================[Teclado]==================
+// UN solo teclado, "tonto": no sabe qué hace cada tecla, solo le avisa a la pantalla actual
+// que se apretó. Cada pantalla decide qué hacer (polimorfismo).
+object teclado {
+  method configurar() {
+    keyboard.a().onPressDo({ navegador.pantallaActual().teclaA() })
+    keyboard.d().onPressDo({ navegador.pantallaActual().teclaD() })
+    keyboard.left().onPressDo({ navegador.pantallaActual().teclaIzquierda() })
+    keyboard.right().onPressDo({ navegador.pantallaActual().teclaDerecha() })
+    keyboard.space().onPressDo({ navegador.pantallaActual().teclaEspacio() })
+    keyboard.enter().onPressDo({ navegador.pantallaActual().teclaEnter() })
+    keyboard.backspace().onPressDo({ navegador.pantallaActual().teclaBackspace() })
+    keyboard.c().onPressDo({ navegador.pantallaActual().teclaC() })
+    keyboard.f().onPressDo({ navegador.pantallaActual().teclaF() })
+    keyboard.b().onPressDo({ navegador.pantallaActual().teclaB() })
+    keyboard.r().onPressDo({ navegador.pantallaActual().teclaR() })
+  }
+}
+
+//==================[Pantalla]==================
+// Clase base: define TODAS las teclas como "no hacer nada" y el ciclo mostrar/ocultar.
+// Cada pantalla pisa (override) solo las teclas que le importan.
+class Pantalla {
+  // Imagen de fondo de la pantalla (cada una la define).
+  method fondo()
+
+  // Elementos visuales que se agregan al mostrar la pantalla y se sacan al ocultarla.
+  method visuales() = []
+
+  method mostrar() {
+    self.visuales().forEach({ visual => game.addVisual(visual) })
+  }
+
+  method ocultar() {
+    self.visuales().forEach({ visual => game.removeVisual(visual) })
+  }
+
+  method teclaA() {}
+  method teclaD() {}
+  method teclaIzquierda() {}
+  method teclaDerecha() {}
+  method teclaEspacio() {}
+  method teclaEnter() {}
+  method teclaC() {}
+  method teclaF() {}
+  method teclaB() {}
+  method teclaR() {}
+
+  // Por defecto, backspace vuelve a la pantalla anterior (en el menú inicial no hay a dónde volver).
+  method teclaBackspace() {
+    navegador.volver()
+  }
+}
+
+//==================[Selector (composición)]==================
+// Un cursor que recorre una lista de opciones. Es a la vez la lógica (indice) y el visual
+// (marco que se dibuja sobre la opción actual). Lo reusan menú inicial y selección de tablero.
+// Cada opción tiene que entender: position(), image() y elegir().
+class Selector {
+  const property opciones
+  const property image
+  var indice = 0
+
+  method actual() = opciones.get(indice)
+
+  method position() = self.actual().position()
+
+  method siguiente() {
+    indice = (indice + 1) % opciones.size()
+  }
+
+  method anterior() {
+    indice = (indice - 1 + opciones.size()) % opciones.size()
+  }
+
+  method reiniciar() {
+    indice = 0
+  }
+}
+
+//==================[Pantalla con opciones (herencia)]==================
+// Para las pantallas donde se navega entre opciones con un selector.
+class PantallaConOpciones inherits Pantalla {
+  const selector
+
+  override method visuales() = selector.opciones() + [selector]
+
+  override method mostrar() {
+    selector.reiniciar()
+    super()
+  }
+
+  override method teclaA() { selector.anterior() }
+  override method teclaIzquierda() { selector.anterior() }
+  override method teclaD() { selector.siguiente() }
+  override method teclaDerecha() { selector.siguiente() }
+  override method teclaEnter() { selector.actual().elegir() }
+  override method teclaEspacio() { selector.actual().elegir() }
+}
+
+//==================[Configuración elegida en los menús]==================
+// Lo que van decidiendo los jugadores y después consume la pantalla de juego / la partida.
+object configuracion {
+  var property modo = modoContraCPU
+  var property escenario = escenarioClasico
+}
+
+//==================[Modos de juego (polimorfismo)]==================
+object modoContraCPU {
+  method hayJugador2() = false
+  method imagenDelContrincante() = "cpu.png"
+}
+
+object modo1vs1 {
+  method hayJugador2() = true
+  method imagenDelContrincante() = "jugador2.png"
+}
+
+//==================[Pantalla: menú inicial]==================
+// Jugar | Cómo jugar. Se navega con A/D o las flechas y se elige con Enter/Espacio.
+object opcionJugar {
+  method position() = game.at(1, 2)
+  method image() = "opcion-jugar.png"
+  method elegir() { navegador.irA(pantallaSeleccionModo) }
+}
+
+object opcionComoJugar {
+  method position() = game.at(4, 2)
+  method image() = "opcion-como-jugar.png"
+  method elegir() { navegador.irA(pantallaComoJugar) }
+}
+
+object menuInicial inherits PantallaConOpciones(
+  selector = new Selector(opciones = [opcionJugar, opcionComoJugar], image = "cursor.png")
+) {
+  override method fondo() = "menu-inicial.png"
+}
+
+//==================[Pantalla: cómo jugar]==================
+// Solo explicación (teclas, fichas, tableros). Backspace vuelve (heredado de Pantalla).
 object pantallaComoJugar inherits Pantalla {
-    //explicacion teclas, fichas y tableros
+  override method fondo() = "como-jugar.png"
+}
+
+//==================[Pantalla: selección de modo]==================
+// Jugador 1 a la izquierda, a la derecha CPU por defecto.
+// Jugador 2 (Enter) se suma y reemplaza a la CPU. Jugador 1 (Espacio) confirma.
+object panelJugador1 {
+  method position() = game.at(0, 0)
+  method image() = "jugador1.png"
+}
+
+object panelContrincante {
+  method position() = game.at(4, 0)
+  method image() = pantallaSeleccionModo.modoElegido().imagenDelContrincante()
 }
 
 object pantallaSeleccionModo inherits Pantalla {
-    //Pantalla dividida con una linea vertical del lado izquierdo aparece
-    //jugador 1 y por defecto CPU del lado derecho pero abajo un texto que diga apretar
-    //Espacio para jugador 2 y aparece la imagen de jugador 2 con sus teclas
-    //si jugador 1 apreta enter antes que jugador 2 aprete espacio va contra el bot 
-    
+  var property modoElegido = modoContraCPU
+
+  override method fondo() = "seleccion-modo.png"
+
+  override method visuales() = [panelJugador1, panelContrincante]
+
+  override method mostrar() {
+    modoElegido = modoContraCPU
+    super()
+  }
+
+  // Jugador 2 se suma
+  override method teclaEnter() {
+    modoElegido = modo1vs1
+  }
+
+  // Jugador 1 confirma
+  override method teclaEspacio() {
+    configuracion.modo(modoElegido)
+    navegador.irA(pantallaSeleccionTablero)
+  }
 }
+
+//==================[Pantalla: selección de tablero]==================
+// Cada opción es un Escenario (miniatura + nombre + fondo del juego).
+class Escenario {
+  const property nombre
+  const property fondo
+  const property image
+  const columna
+  const fila
+
+  method position() = game.at(columna, fila)
+
+  method elegir() {
+    configuracion.escenario(self)
+    navegador.irA(pantallaJuego)
+  }
+}
+
+object escenarioClasico inherits Escenario(nombre = "Clásico", fondo = "tablero.png", image = "mini-clasico.png", columna = 1, fila = 3) {}
+
+object escenarioNoche inherits Escenario(nombre = "Noche", fondo = "tablero-noche.png", image = "mini-noche.png", columna = 4, fila = 3) {}
 
 object pantallaSeleccionTablero inherits Pantalla {
-    //pequeña imagen de cada tablero con su nombre cada jugador navega entre ellos y elije uno
+  const escenarios = [escenarioClasico, escenarioNoche]
+  const selectorJugador1 = new Selector(opciones = escenarios, image = "cursor-jugador1.png")
+  const selectorJugador2 = new Selector(opciones = escenarios, image = "cursor-jugador2.png")
+
+  override method fondo() = "seleccion-tablero.png"
+
+  override method visuales() =
+    if (configuracion.modo().hayJugador2()) escenarios + [selectorJugador1, selectorJugador2]
+    else escenarios + [selectorJugador1]
+
+  override method mostrar() {
+    selectorJugador1.reiniciar()
+    selectorJugador2.reiniciar()
+    super()
+  }
+
+  // Jugador 1: A/D + Espacio
+  override method teclaA() { selectorJugador1.anterior() }
+  override method teclaD() { selectorJugador1.siguiente() }
+  override method teclaEspacio() { selectorJugador1.actual().elegir() }
+
+  // Jugador 2 (solo si el modo lo tiene): flechas + Enter
+  override method teclaIzquierda() {
+    if (configuracion.modo().hayJugador2()) { selectorJugador2.anterior() }
+  }
+  override method teclaDerecha() {
+    if (configuracion.modo().hayJugador2()) { selectorJugador2.siguiente() }
+  }
+  override method teclaEnter() {
+    if (configuracion.modo().hayJugador2()) { selectorJugador2.actual().elegir() }
+  }
 }
 
+//==================[Pantalla: juego]==================
+// Es la puerta de entrada a la partida: traduce las teclas a mensajes para `partida`.
+// Hoy las teclas de ambos jugadores mueven la ficha del turno actual (igual que antes).
 object pantallaJuego inherits Pantalla {
-    //Pasamos al tablero como lo conocemos
-}
+  override method fondo() = configuracion.escenario().fondo()
 
-//------------------[Teclado]------------------------
-//Cada teclado va a saber que hace cada tecla en cada pantalla,asi es mas intuitivo y no tenemos que poner una tecla distitna para cada accion
-//ademas suma herencia y polimorfismo ;)
-class Teclado{
+  override method mostrar() {
+    super()
+    partida.reiniciar()
+  }
 
-    method a(pantalla){}
-    method d(pantalla){}
-    method espacio(pantalla){}
-    method izquierda(pantalla){}
-    method derecha(pantalla){}
-    method enter(pantalla){}
-    method backspace(pantalla){}
-    
+  override method ocultar() {
+    partida.limpiar()
+    super()
+  }
 
+  override method teclaA() { partida.desplazarIzquierda() }
+  override method teclaIzquierda() { partida.desplazarIzquierda() }
+  override method teclaD() { partida.desplazarDerecha() }
+  override method teclaDerecha() { partida.desplazarDerecha() }
+  override method teclaEspacio() { partida.soltar() }
+  override method teclaEnter() { partida.soltar() }
+  override method teclaC() { partida.elegirComun() }
+  override method teclaF() { partida.elegirFantasma() }
+  // override method teclaB() { partida.elegirBomba() }
+  override method teclaR() { partida.reiniciar() }
 
-}
-
-object tecladoMenuInicial inherits Teclado {
-    //con las flechas cambias entre juegar y como jugar con enter elejis
-    override method a(pantalla){
-        pantalla.toggle(); 
-        //Esto creo que es lo contrario a polimorfismo pq la idea es que lo entienda solo la de menuInicial y que no se llame si no se esta en esta pantalla
+  // No se sale mientras hay una ficha cayendo (si no, al aterrizar aparecería el cartel en otra pantalla).
+  override method teclaBackspace() {
+    if (!partida.tablero().hayFichaCayendo()) {
+      navegador.irAlInicio()
     }
-    //Ambas pueden hacer toggle porque solo va a haber 2 opciones Jugar o Como Jugar, si hay mas podriamos hacer una lista y que te mueva por la lista o poner 1 letra por opcion
-    override method d(pantalla){
-        pantalla.toggle(); 
-        //Esto creo que es lo contrario a polimorfismo pq la idea es que lo entienda solo la de menuInicial y que no se llame si no se esta en esta pantalla
-    }
-    override method enter(pantalla){
-        pantalla.confirmar()
-    }
-}
-
-object tecladoComoJugar inherits Teclado {
-    //solo va a haber texto no se interactua con flechas, con escape volves a menu inicial
-    override method backspace(pantalla){
-        pantalla.volver()
-    }
-}
-
-object tecladoSeleccionModo inherits Teclado {
-    //si se apreta enter de una pasas a jugar, sino con espacio se agrega el otro jugador
-    //con escape volves a menu inicial
-    override method espacio(pantalla){
-        pantalla.confirmarJugador1()
-    }
-    override method enter(pantalla){
-        pantalla.confirmarJugador2()
-    }
-    override method backspace(pantalla){
-        pantalla.volver()
-    }
-}
-
-object tecladoSeleccionTablero inherits Teclado {
-    //cada jugador con sus respectivas teclas de movimiento (AD o flechas) navega entre los tableros
-    //con la respectiva tecla de confirmacion (espacio o enter) elige un tablero
-    //con escape volves a seleccionmodo
-    override method a(pantalla){
-        pantalla.desplazarIzquierdaJugador1()
-    }
-    override method d(pantalla){
-        pantalla.desplazarDerechaJugador1()
-    }
-    override method izquierda(pantalla){
-        pantalla.desplazarIzquierdaJugador2()
-    }
-    override method derecha(pantalla){
-        pantalla.desplazarDerechaJugador2()
-    }
-    override method espacio(pantalla){
-        pantalla.confirmarJugador1()
-    }
-    override method enter(pantalla){
-        pantalla.confirmarJugador2()
-    }
-    override method backspace(pantalla){
-        pantalla.volver()
-    }
-    
-}
-
-object tecladoJuego inherits Teclado {
-    //cada jugador controla su ficha con ad o las flechas y la tira con espacio o enter
-    //si tiene la ficha disponible con f cambia a la fantasma,b a la bomba, t a la tetris
-    //con escape volves a menu inicial
-    override method a(pantalla){
-        pantalla.desplazarIzquierdaJugador1()
-    }
-    override method d(pantalla){
-        pantalla.desplazarDerechaJugador1()
-    }
-    override method izquierda(pantalla){
-        pantalla.desplazarIzquierdaJugador2()
-    }
-    override method derecha(pantalla){
-        pantalla.desplazarDerechaJugador2()
-    }
-    override method espacio(pantalla){
-        pantalla.confirmarJugador1()
-    }
-    override method enter(pantalla){
-        pantalla.confirmarJugador2()
-    }
-    override method backspace(pantalla){
-        pantalla.volver()
-    }
-    //Implementar las letras para las fichas especiales, pero se me ocurria que en la barra
-    //de fichas disponible vayas cambiando con shift por ejemplo o puede ser con la W y la flecha para arriba
-    //seria otra opcion donde usar una lista ;)
+  }
 }

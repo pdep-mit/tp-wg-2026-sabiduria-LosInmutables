@@ -21,9 +21,9 @@ object partida {
   // queda congelado: ni se mueve la ficha en mano, ni se elige otro tipo, ni se suelta.
   method jugando() = !tablero.hayGanador()
 
-  // Se llama desde el program, antes de game.start(): muestra la primera ficha flotando.
-  method iniciar() {
-    self.ponerEnMano(fichaEnMano)
+  method limpiar() {
+    game.removeVisual(fichaEnMano)
+    tablero.reiniciar()
   }
 
   // Vuelve a dejar la partida como al principio: tablero vacío, sin ganador,
