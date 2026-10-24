@@ -1,8 +1,8 @@
 import wollok.game.*
 
 // Ficha: lo que tienen en común todas las fichas (jugador, posición y la mecánica de caer).
-// No se crea directamente: se usan FichaComun o FichaFantasma, que se diferencian en
-// `image` y en `filaDeAterrizajeEn`, cada una a su manera (polimorfismo).
+// No se crea directamente: se usan FichaComun, FichaFantasma o FichaBomba, que se diferencian en
+// `image`, `reemplaza` y `filaDeAterrizajeEn`, cada una a su manera (polimorfismo).
 //
 // La ficha se encarga de su propia caída: le pregunta al tablero cuántas fichas hay en su
 // columna, decide hasta qué fila tiene que bajar, baja sola y, al llegar, avisa que se apoyó.
@@ -12,7 +12,7 @@ class Ficha {
   var cayendo = false
   
 
-  const milisegundosPorCelda = 200
+  const milisegundosPorCelda = 32
 
   method estaCayendo() = cayendo
 
@@ -54,21 +54,41 @@ class Ficha {
 }
 
 // Ficha común: queda apoyada arriba de las fichas que ya hay en la columna.
+// No reemplaza ninguna: si la columna está llena no se puede soltar.
 class FichaComun inherits Ficha {
   method image() = self.imagenDe("comun")
-  method esFichaFantasma() = false
+  method reemplaza() = false
   method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
 }
 
 // Ficha fantasma: atraviesa las primeras `atraviesa` fichas de la columna (contando desde arriba)
-// y reemplaza la que encuentra. Si la columna no tiene más de `atraviesa` fichas, cae como una común.
+// y reemplaza la que encuentra. Cuántas atraviesa se sortea al crearla, de 0 a 5: con 5 llega
+// hasta el fondo de una columna llena. Si la columna no tiene más de `atraviesa` fichas, cae
+// como una común. Reemplaza fichas, así que se puede soltar aunque la columna esté llena.
 class FichaFantasma inherits Ficha {
-  const atraviesa = 2
+  const atraviesa = (0..5).anyOne()
 
   method image() = self.imagenDe("fantasma")
-  method esFichaFantasma() = true
+  method reemplaza() = true
   method filaDeAterrizajeEn(tablero) {
     const altura = self.alturaDeSuColumnaEn(tablero)
     return if (altura > atraviesa) altura - 1 - atraviesa else altura
+  }
+}
+
+// Ficha bomba: reemplaza la ficha de arriba de la columna (por eso se puede soltar aunque
+// esté llena) y al llegar explota: rompe las fichas que tiene a la izquierda y a la derecha.
+// Lo que estaba apoyado sobre las fichas rotas queda flotando y baja.
+class FichaBomba inherits FichaComun {
+  override method image() = self.imagenDe("bomba")
+
+  override method reemplaza() = true
+
+  override method filaDeAterrizajeEn(tablero) = (self.alturaDeSuColumnaEn(tablero) - 1).max(0)
+
+  override method aterrizar(tablero) {
+    tablero.romperAlLadoDe(self)
+    super(tablero)
+    tablero.bajarFichasFlotantes()
   }
 }

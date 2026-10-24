@@ -16,12 +16,16 @@ program CuatroEnLinea {
 	// Enter: soltar la ficha
 	keyboard.enter().onPressDo({ partida.soltar() })
 
-	// C, F: elegir la ficha en mano (común o fantasma)
+	// C, F, B: elegir la ficha en mano (común, fantasma o bomba)
 	keyboard.c().onPressDo({ partida.elegirComun() })
 	keyboard.f().onPressDo({ partida.elegirFantasma() })
+	keyboard.b().onPressDo({ partida.elegirBomba() })
 
 	// R: reiniciar la partida (solo tiene efecto real una vez que alguien ganó)
 	keyboard.r().onPressDo({ partida.reiniciar() })
+
+	// Parpadeo de la sombra de la ficha fantasma (muestra dónde va a caer)
+	game.onTick(400, "parpadeoSombra", { partida.parpadearSombra() })
 
 	game.schedule(1, { partida.iniciar() })
 	game.start()

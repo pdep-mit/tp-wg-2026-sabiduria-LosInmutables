@@ -1,19 +1,29 @@
 import wollok.game.*
 
-// Objeto fijo en el centro del tablero, invisible mientras nadie ganó. Sirve de ancla para
-// que el cartel de victoria aparezca siempre en el mismo lugar, en vez de pegado a la ficha
-// que completó la línea. cartel.png es una imagen vacía (transparente) de una sola celda: lo
-// único que se llega a ver es el globo de game.say. El tablero visible es de 7 columnas por
-// 7 filas (6 del juego más la de arriba), así que la celda del medio es la (3,3): como la
-// imagen ocupa una sola celda, ubicarla ahí ya la centra. Si cartel.png pasara a ocupar más
-// de una celda, columna y fila son los dos números para correr y volver a centrarla.
+// Cartel de victoria: se agrega al juego recién cuando alguien gana y se saca al reiniciar.
+// Hay una imagen por jugador (gano-rojo.png, gano-amarillo.png), de 5 columnas x 3 filas.
+// El tablero visible es de 7 columnas por 7 filas (6 del juego más la de arriba) y la imagen
+// se ancla en su esquina inferior izquierda: con columna 1 y fila 2 queda centrada. Si cambia
+// el tamaño de las imágenes, columna y fila son los dos números para volver a centrarla.
 object cartelDeVictoria {
-  const columna = 5
-  const fila = 5
+  const columna = 1
+  const fila = 2
+  var ganador = null
+
+  method ganador(jugador) {
+    ganador = jugador
+  }
 
   method position() = game.at(columna, fila)
 
-  method image() = "cartel.png"
+  method image() = "gano-" + ganador.color() + ".png"
+}
+
+// Cartel de empate: igual que el de victoria, en el mismo lugar, pero gris (empate.png).
+object cartelDeEmpate {
+  method position() = cartelDeVictoria.position()
+
+  method image() = "empate.png"
 }
 
 // Tablero de Cuatro en línea (7 columnas x 6 filas).
@@ -24,10 +34,11 @@ class Tablero {
   const property filas = 6
   const fichas = []
   var ganador = null
-
-  method ganador() = ganador
+  var empate = false
 
   method hayGanador() = ganador != null
+
+  method hayEmpate() = empate
 
   method agregar(ficha) {
     fichas.add(ficha)
@@ -60,36 +71,64 @@ class Tablero {
     reemplazadas.forEach({ otra => game.removeVisual(otra) })
     fichas.removeAll(reemplazadas)
     self.revisarGanador(ficha)
+    self.revisarEmpate()
   }
+
+  // La bomba acaba de llegar: rompe lo que tiene a la izquierda y a la derecha.
+  method romperAlLadoDe(bomba) {
+    self.destruirEn(bomba.position().x() - 1, bomba.position().y())
+    self.destruirEn(bomba.position().x() + 1, bomba.position().y())
+  }
+
+  method destruirEn(x, y) {
+    const ficha = self.fichaApoyadaEn(x, y)
+    if (ficha != null) {
+      game.removeVisual(ficha)
+      fichas.remove(ficha)
+    }
+  }
+
+  // Cada ficha tiene que quedar apoyada sobre las que tiene debajo: su fila es la cantidad
+  // de fichas que hay debajo de ella en su columna. Las que no están ahí caen hasta su fila.
+  method bajarFichasFlotantes() {
+    fichas.forEach({ ficha =>
+      const fila = self.cantidadDebajoDe(ficha)
+      if (fila < ficha.position().y()) {
+        ficha.caerHasta(fila, self)
+      }
+    })
+  }
+
+  method cantidadDebajoDe(ficha) =
+    fichas.filter({ otra => otra.estaEnColumna(ficha.position().x()) && otra.position().y() < ficha.position().y() }).size()
 
   // Si la ficha que acaba de apoyarse completa un 4 en línea, su jugador es el ganador.
   method revisarGanador(ficha) {
-    if (self.formaCuatroEnLinea(ficha)) {
+    if (!self.hayGanador() && self.formaCuatroEnLinea(ficha)) {
       ganador = ficha.jugador()
+      cartelDeVictoria.ganador(ganador)
       game.addVisual(cartelDeVictoria)
-      self.avisarVictoria()
     }
   }
 
-  // game.say arma un globo que se borra solo a los 2 segundos. Para que quede fijo, este
-  // método se vuelve a programar a sí mismo con game.schedule (igual que Ficha.avanzarHasta)
-  // y se repite refrescando el globo mientras haya ganador; se corta solo cuando reiniciar()
-  // pone el ganador en null.
-  method avisarVictoria() {
-    if (self.hayGanador()) {
-      game.say(cartelDeVictoria, ganador.color() + " ganó! Presioná R para reiniciar.")
-      game.schedule(1000, { self.avisarVictoria() })
+  // Si se llenó el tablero y nadie ganó, es empate: no se puede soltar ninguna ficha más.
+  method revisarEmpate() {
+    if (!self.hayGanador() && self.estaLleno()) {
+      empate = true
+      game.addVisual(cartelDeEmpate)
     }
   }
 
-  // Vuelve a dejar el tablero como recién empezado: sin fichas y sin ganador.
+  method estaLleno() = fichas.filter({ ficha => ficha.estaApoyada() }).size() == columnas * filas
+
+  // Vuelve a dejar el tablero como recién empezado: sin fichas, sin ganador y sin empate.
   method reiniciar() {
     fichas.forEach({ ficha => game.removeVisual(ficha) })
     fichas.clear()
-    if (self.hayGanador()) {
-      game.removeVisual(cartelDeVictoria)
-    }
+    game.removeVisual(cartelDeVictoria)
+    game.removeVisual(cartelDeEmpate)
     ganador = null
+    empate = false
   }
 
   // Hay 4 en línea si, para alguna de las 4 direcciones (horizontal, vertical y las dos
