@@ -1,5 +1,6 @@
 import tablero.*
 import fichas.*
+import cpu.*
 
 class Jugador {
   const property color
@@ -21,16 +22,28 @@ object partida {
   const jugadorAmarillo = new Jugador(color = "amarillo")
   var jugadorActual = jugadorRojo
   var property fichaEnMano = new FichaComun(jugador = jugadorRojo)
+  // Si es true, el jugador amarillo es la CPU (la elige pantallaJuego al mostrarse).
+  var property contraCPU = false
   // Columna sobre la que "flota" la ficha en mano (fila extra, arriba del tablero).
   var columnaActual = 3
+
+  method jugadorActual() = jugadorActual
 
   // Mientras nadie ganó ni empataron se puede seguir jugando. Una vez que termina la partida,
   // el tablero queda congelado: ni se mueve la ficha en mano, ni se elige otro tipo, ni se suelta.
   method jugando() = !tablero.hayGanador() && !tablero.hayEmpate()
 
-  // Se llama desde el program, antes de game.start(): muestra la primera ficha flotando.
-  method iniciar() {
-    self.ponerEnMano(fichaEnMano)
+  method turnoDeLaCPU() = contraCPU && jugadorActual == jugadorAmarillo
+
+  // Las teclas solo andan si la partida sigue y no le toca a la CPU.
+  method puedeJugarElHumano() = self.jugando() && !self.turnoDeLaCPU()
+
+  // Al salir de la pantalla de juego: se saca todo lo que la partida tenía en pantalla.
+  method limpiar() {
+    game.removeVisual(fichaEnMano)
+    game.removeVisual(sombraDelFantasma)
+    tablero.reiniciar()
+    contraCPU = false
   }
 
   // Vuelve a dejar la partida como al principio: tablero vacío, sin ganador,
@@ -40,6 +53,7 @@ object partida {
     tablero.reiniciar()
     jugadorActual = jugadorRojo
     columnaActual = 3
+    cpu.reiniciar()
     self.ponerEnMano(new FichaComun(jugador = jugadorRojo))
   }
 
@@ -61,32 +75,33 @@ object partida {
   method posicionDeAterrizaje() = game.at(columnaActual, fichaEnMano.filaDeAterrizajeEn(tablero))
 
   // Se llama a intervalos regulares desde el program: si la sombra se ve la saca y si no se
-  // ve la pone, lo que da el parpadeo. Solo aparece si la ficha en mano reemplaza otra.
+  // ve la pone, lo que da el parpadeo. Solo aparece si la ficha en mano se está mostrando
+  // (o sea, si estamos en la pantalla de juego) y reemplaza otra.
   method parpadearSombra() {
     if (game.hasVisual(sombraDelFantasma)) {
       game.removeVisual(sombraDelFantasma)
-    } else if (fichaEnMano.reemplaza() && self.jugando()) {
+    } else if (game.hasVisual(fichaEnMano) && fichaEnMano.reemplaza() && self.jugando()) {
       game.addVisual(sombraDelFantasma)
     }
   }
 
   // Cambiar de tipo de ficha: se saca la que flotaba y se pone la nueva en el mismo lugar.
   method elegirComun() {
-    if (self.jugando()) {
+    if (self.puedeJugarElHumano()) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(new FichaComun(jugador = jugadorActual))
     }
   }
 
   method elegirFantasma() {
-    if (self.jugando()) {
+    if (self.puedeJugarElHumano()) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(new FichaFantasma(jugador = jugadorActual))
     }
   }
 
   method elegirBomba() {
-    if (self.jugando()) {
+    if (self.puedeJugarElHumano()) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(new FichaBomba(jugador = jugadorActual))
     }
@@ -94,26 +109,32 @@ object partida {
 
   // Mover la ficha flotante sin salirse del tablero.
   method desplazarIzquierda() {
-    if (self.jugando() && columnaActual > 0) {
+    if (self.puedeJugarElHumano() && columnaActual > 0) {
       columnaActual = columnaActual - 1
       self.actualizarPosicionDeFichaEnMano()
     }
   }
 
   method desplazarDerecha() {
-    if (self.jugando() && columnaActual < tablero.columnas() - 1) {
+    if (self.puedeJugarElHumano() && columnaActual < tablero.columnas() - 1) {
       columnaActual = columnaActual + 1
       self.actualizarPosicionDeFichaEnMano()
     }
   }
 
   // Si hay una ficha cayendo o la columna está llena no se puede soltar y el turno no pasa.
-  // Si la partida ya terminó, jugando() corta todo antes de llegar a mirar esto.
+  // Si la partida ya terminó o le toca a la CPU, puedeJugarElHumano() corta todo antes de llegar a mirar esto.
   method soltar() {
-    if (self.jugando() && !tablero.hayFichaCayendo() && (!tablero.columnaLlena(columnaActual) || fichaEnMano.reemplaza())) {
-      tablero.soltar(fichaEnMano, columnaActual)
-      self.pasarTurno()
+    if (self.puedeJugarElHumano() && !tablero.hayFichaCayendo() && (!tablero.columnaLlena(columnaActual) || fichaEnMano.reemplaza())) {
+      self.soltarEn(columnaActual)
     }
+  }
+
+  // Suelta la ficha en mano en esa columna y pasa el turno. La usa el humano (con la columna
+  // que eligió con las flechas) y la CPU (con la que eligió ella).
+  method soltarEn(columna) {
+    tablero.soltar(fichaEnMano, columna)
+    self.pasarTurno()
   }
 
   method pasarTurno() {
@@ -123,5 +144,8 @@ object partida {
       jugadorActual = jugadorRojo
     }
     self.ponerEnMano(new FichaComun(jugador = jugadorActual))
+    if (self.turnoDeLaCPU()) {
+      cpu.jugar()
+    }
   }
 }

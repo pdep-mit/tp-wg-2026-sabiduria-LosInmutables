@@ -1,4 +1,5 @@
 import wollok.game.*
+import fichas.*
 
 // Cartel de victoria: se agrega al juego recién cuando alguien gana y se saca al reiniciar.
 // Hay una imagen por jugador (gano-rojo.png, gano-amarillo.png), de 5 columnas x 3 filas.
@@ -36,6 +37,8 @@ class Tablero {
   var ganador = null
   var empate = false
 
+  method ganador() = ganador
+
   method hayGanador() = ganador != null
 
   method hayEmpate() = empate
@@ -51,6 +54,13 @@ class Tablero {
   method alturaDe(columna) = self.fichasApoyadasEn(columna).size()
 
   method columnaLlena(columna) = self.alturaDe(columna) == filas
+
+  method columnasLibres() = (0..columnas - 1).filter({ columna => !self.columnaLlena(columna) })
+
+  // ¿Ganaría el jugador si soltara una ficha común en esa columna? Se prueba con una ficha
+  // que no se agrega al tablero, así que no cambia nada.
+  method ganaSiSueltaEn(jugador, columna) =
+    self.formaCuatroEnLinea(new FichaComun(jugador = jugador, position = game.at(columna, self.alturaDe(columna))))
 
   method hayFichaCayendo() = fichas.any({ ficha => ficha.estaCayendo() })
 

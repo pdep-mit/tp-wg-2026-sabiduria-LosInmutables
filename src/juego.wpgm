@@ -1,32 +1,19 @@
 import wollok.game.*
 import partida.*
+import pantallasYteclados.*
 
 program CuatroEnLinea {
 	game.title("Grupo: LosInmutables | Cuatro en línea")
 	game.width(partida.tablero().columnas())
 	game.height(partida.tablero().filas() + 1) // una fila extra arriba: de ahí caen las fichas
-	game.boardGround("tablero.png")
 
-	// A, D: desplazar la ficha antes de soltarla
-	keyboard.a().onPressDo({ partida.desplazarIzquierda() })
-	keyboard.left().onPressDo({ partida.desplazarIzquierda() })
-	keyboard.d().onPressDo({ partida.desplazarDerecha()} )
-	keyboard.right().onPressDo({ partida.desplazarDerecha() })
-
-	// Enter: soltar la ficha
-	keyboard.enter().onPressDo({ partida.soltar() })
-
-	// C, F, B: elegir la ficha en mano (común, fantasma o bomba)
-	keyboard.c().onPressDo({ partida.elegirComun() })
-	keyboard.f().onPressDo({ partida.elegirFantasma() })
-	keyboard.b().onPressDo({ partida.elegirBomba() })
-
-	// R: reiniciar la partida (solo tiene efecto real una vez que alguien ganó)
-	keyboard.r().onPressDo({ partida.reiniciar() })
+	// Un solo teclado: reenvía cada tecla a la pantalla actual
+	teclado.configurar()
 
 	// Parpadeo de la sombra de la ficha fantasma (muestra dónde va a caer)
 	game.onTick(400, "parpadeoSombra", { partida.parpadearSombra() })
 
-	game.schedule(1, { partida.iniciar() })
+	// Arranca en el menú inicial (el fondo lo pone cada pantalla)
+	game.schedule(1, { navegador.iniciar() })
 	game.start()
 }
