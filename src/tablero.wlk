@@ -145,6 +145,7 @@ class Tablero {
   method mostrarCartelDeVictoria() {
     cartelDeVictoria.ganador(ganador)
     game.addVisual(cartelDeVictoria)
+    game.schedule(3000,{=> game.removeVisual(cartelDeVictoria)})
   }
 
   // Si se llenó el tablero y nadie ganó, es empate: no se puede soltar ninguna ficha más.
