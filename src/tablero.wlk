@@ -29,10 +29,12 @@ object cartelDeEmpate {
 
 // Tablero de Cuatro en línea (7 columnas x 6 filas).
 // Guarda todas las fichas que se soltaron, tanto las apoyadas como la que está cayendo.
-// Cada ficha sabe su posición; el tablero sabe qué fichas hay y responde preguntas sobre ellas.
+// Cada ficha sabe su posición y hace lo suyo (caer, reemplazar, explotar...); el tablero sabe
+// qué fichas hay, responde preguntas sobre ellas y decide si alguien ganó o empataron.
 class Tablero {
   const property columnas = 7
   const property filas = 6
+  const property largoParaGanar = 4
   const fichas = []
   var ganador = null
   var empate = false
@@ -57,10 +59,9 @@ class Tablero {
 
   method columnasLibres() = (0..columnas - 1).filter({ columna => !self.columnaLlena(columna) })
 
-  // Las columnas donde se puede soltar esa ficha: las que reemplazan fichas (fantasma y bomba)
-  // pueden caer también en una columna llena.
+  // Las columnas donde se puede soltar esa ficha (cada ficha sabe si puede caer en una columna).
   method columnasDondePuedeSoltar(ficha) =
-    if (ficha.reemplaza()) (0..columnas - 1) else self.columnasLibres()
+    (0..columnas - 1).filter({ columna => ficha.puedeSoltarseEn(self, columna) })
 
   // Las columnas donde el jugador, soltando una ficha común, armaría una línea de ese largo o más.
   method columnasQueArman(jugador, largo) =
@@ -92,40 +93,31 @@ class Tablero {
   }
 
   // La ficha avisa que terminó de caer. Si en su celda ya había otra ficha apoyada
-  // (caso fantasma), la nueva la reemplaza. Hecho eso, se fija si esa jugada ganó la partida.
+  // (caso fantasma y bomba), la nueva la reemplaza. Hecho eso, se fija si esa jugada ganó la partida.
   method apoyar(ficha) {
     const reemplazadas = fichas.filter({ otra => otra != ficha && otra.estaApoyada() && otra.estaEn(ficha.position()) })
-    reemplazadas.forEach({ otra => game.removeVisual(otra) })
-    fichas.removeAll(reemplazadas)
+    reemplazadas.forEach({ otra => self.quitar(otra) })
     self.revisarGanador(ficha)
     self.revisarEmpate()
   }
 
-  // La bomba acaba de llegar: rompe lo que tiene a la izquierda y a la derecha.
-  method romperAlLadoDe(bomba) {
-    self.destruirEn(bomba.position().x() - 1, bomba.position().y())
-    self.destruirEn(bomba.position().x() + 1, bomba.position().y())
-  }
-
-  // La ficha (una voladora) quedó en el aire: se llenan con fichas azules las celdas que tiene
-  // debajo, desde la última ficha de su columna hasta ella.
-  method sostener(ficha) {
-    const columna = ficha.position().x()
-    const debajo = self.cantidadDebajoDe(ficha)
-    (ficha.position().y() - debajo).times({ i => self.agregarVisible(new FichaAzul(position = game.at(columna, debajo + i - 1))) })
-  }
-
+  // Agrega una ficha que aparece de golpe (en vez de caer), como las azules de la voladora.
   method agregarVisible(ficha) {
     game.addVisual(ficha)
     self.agregar(ficha)
   }
 
+  // Saca la ficha apoyada en esa celda, si hay una (la usa la bomba al explotar).
   method destruirEn(x, y) {
     const ficha = self.fichaApoyadaEn(x, y)
     if (ficha != null) {
-      game.removeVisual(ficha)
-      fichas.remove(ficha)
+      self.quitar(ficha)
     }
+  }
+
+  method quitar(ficha) {
+    game.removeVisual(ficha)
+    fichas.remove(ficha)
   }
 
   // Cada ficha tiene que quedar apoyada sobre las que tiene debajo: su fila es la cantidad
@@ -175,7 +167,7 @@ class Tablero {
     empate = false
   }
 
-  method formaCuatroEnLinea(ficha) = self.formaLineaDe(ficha, 4)
+  method formaCuatroEnLinea(ficha) = self.formaLineaDe(ficha, largoParaGanar)
 
   // Hay una línea de ese largo si, para alguna de las 4 direcciones (horizontal, vertical y las dos
   // diagonales), la ficha tiene seguidas ese largo de fichas propias (contándola), mirando para los dos lados.

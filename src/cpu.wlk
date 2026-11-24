@@ -60,7 +60,7 @@ class Jugada {
   // La jugada es segura si no le deja el 4 en línea servido al rival: ni porque la propia
   // jugada lo arma (una bomba puede hacer caer sus fichas), ni porque en el turno que sigue
   // tendría una columna donde ganar con una ficha común.
-  method esSegura(rival) = tablero.ganador() != rival && tablero.columnasQueArman(rival, 4).isEmpty()
+  method esSegura(rival) = tablero.ganador() != rival && tablero.columnasQueArman(rival, tablero.largoParaGanar()).isEmpty()
 
   method armaLinea(largo) = tablero.formaLineaDe(ficha, largo)
 }
@@ -78,7 +78,7 @@ object estadoJugando {
     if (!ganadoras.isEmpty()) {
       return ganadoras.anyOne().columna()
     } else {
-      const mejor = self.mejorJugada(tablero, jugadas, rival, 3)
+      const mejor = self.mejorJugada(tablero, jugadas, rival, tablero.largoParaGanar() - 1)
       return if (mejor != null) mejor.columna() else jugadas.anyOne().columna()
     }
   }
