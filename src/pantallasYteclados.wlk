@@ -283,40 +283,13 @@ object escenarioClasico inherits Escenario(fondo = "tablero.png", image = "mini-
 
 object escenarioNoche inherits Escenario(fondo = "tablero-noche.png", image = "mini-noche.png", columna = 4, fila = 3) {}
 
-object pantallaSeleccionTablero inherits Pantalla {
-  const escenarios = [escenarioClasico, escenarioNoche]
-  const selectorJugador1 = new Selector(opciones = escenarios, image = "cursor-jugador1.png")
-  const selectorJugador2 = new Selector(opciones = escenarios, image = "cursor-jugador2.png")
-
+// Hay UN solo cursor, compartido: lo mueven las teclas de cualquiera de los dos jugadores
+// (A/D o las flechas) y cualquiera lo confirma (Espacio o Enter), así que los dos siempre
+// terminan eligiendo el mismo tablero, sea contra la CPU o 1 vs 1.
+object pantallaSeleccionTablero inherits PantallaConOpciones(
+  selector = new Selector(opciones = [escenarioClasico, escenarioNoche], image = "cursor-jugador1.png")
+) {
   override method fondo() = "seleccion-tablero.png"
-
-  method hayJugador2() = configuracion.modo().hayJugador2()
-
-  override method visuales() =
-    if (self.hayJugador2()) escenarios + [selectorJugador1, selectorJugador2]
-    else escenarios + [selectorJugador1]
-
-  override method mostrar() {
-    selectorJugador1.reiniciar()
-    selectorJugador2.reiniciar()
-    super()
-  }
-
-  // Jugador 1: A/D + Espacio
-  override method teclaA() { selectorJugador1.anterior() }
-  override method teclaD() { selectorJugador1.siguiente() }
-  override method teclaEspacio() { selectorJugador1.actual().elegir() }
-
-  // Jugador 2 (solo si el modo lo tiene): flechas + Enter
-  override method teclaIzquierda() {
-    if (self.hayJugador2()) { selectorJugador2.anterior() }
-  }
-  override method teclaDerecha() {
-    if (self.hayJugador2()) { selectorJugador2.siguiente() }
-  }
-  override method teclaEnter() {
-    if (self.hayJugador2()) { selectorJugador2.actual().elegir() }
-  }
 }
 
 //==================[Pantalla: juego]==================

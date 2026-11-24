@@ -19,6 +19,9 @@ class Ficha {
 
   method estaApoyada() = !cayendo
 
+  // Nombre del tipo de ficha: sirve para saber si dos fichas son del mismo tipo.
+  method tipo()
+
   method estaEnColumna(columna) = position.x() == columna
 
   method estaEn(otraPosicion) = position.x() == otraPosicion.x() && position.y() == otraPosicion.y()
@@ -63,6 +66,7 @@ class Ficha {
 // Ficha común: queda apoyada arriba de las fichas que ya hay en la columna.
 // No reemplaza ninguna: si la columna está llena no se puede soltar.
 class FichaComun inherits Ficha {
+  method tipo() = "comun"
   method image() = self.imagenDe("comun")
   method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
   // Una ficha igual, para que la CPU pruebe jugadas sin tocar la verdadera.
@@ -76,6 +80,7 @@ class FichaComun inherits Ficha {
 class FichaFantasma inherits Ficha {
   const atraviesa = (0..5).anyOne()
 
+  method tipo() = "fantasma"
   method image() = self.imagenDe("fantasma")
   override method reemplaza() = true
   method filaDeAterrizajeEn(tablero) {
@@ -89,6 +94,7 @@ class FichaFantasma inherits Ficha {
 // esté llena) y al llegar explota: rompe las fichas que tiene a la izquierda y a la derecha.
 // Lo que estaba apoyado sobre las fichas rotas queda flotando y baja.
 class FichaBomba inherits FichaComun {
+  override method tipo() = "bomba"
   override method image() = self.imagenDe("bomba")
 
   override method reemplaza() = true
@@ -115,6 +121,7 @@ class FichaBomba inherits FichaComun {
 class FichaVoladora inherits FichaComun {
   const vuela = (1..3).anyOne()
 
+  override method tipo() = "voladora"
   override method image() = self.imagenDe("voladora")
 
   override method filaDeAterrizajeEn(tablero) = (self.alturaDeSuColumnaEn(tablero) + vuela).min(tablero.filas() - 1)
@@ -138,6 +145,7 @@ class FichaVoladora inherits FichaComun {
 object sinEquipo {}
 
 class FichaAzul inherits Ficha(jugador = sinEquipo) {
+  method tipo() = "azul"
   method image() = "azul.png"
 
   override method aterrizar(tablero) {
