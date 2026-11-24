@@ -257,7 +257,7 @@ object opcionFichasAlAzar inherits OpcionDeFichas(columna = 0, image = "opcion-f
 object opcionFichasAElegir inherits OpcionDeFichas(columna = 4, image = "opcion-fichas-elegir.png", reparto = eleccionDeFichas) {}
 
 object pantallaSeleccionFichas inherits PantallaConOpciones(
-  selector = new Selector(opciones = [opcionFichasAlAzar, opcionFichasAElegir], image = "cursor.png")
+  selector = new Selector(opciones = [opcionFichasAlAzar, opcionFichasAElegir], image = "cursor-fichas.png")
 ) {
   override method fondo() = "seleccion-fichas.png"
 }
