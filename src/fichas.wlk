@@ -66,7 +66,7 @@ class Ficha {
 // Ficha común: queda apoyada arriba de las fichas que ya hay en la columna.
 // No reemplaza ninguna: si la columna está llena no se puede soltar.
 class FichaComun inherits Ficha {
-  method tipo() = "comun"
+  override method tipo() = "comun"
   method image() = self.imagenDe("comun")
   method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
   // Una ficha igual, para que la CPU pruebe jugadas sin tocar la verdadera.
@@ -80,7 +80,7 @@ class FichaComun inherits Ficha {
 class FichaFantasma inherits Ficha {
   const atraviesa = (0..5).anyOne()
 
-  method tipo() = "fantasma"
+  override method tipo() = "fantasma"
   method image() = self.imagenDe("fantasma")
   override method reemplaza() = true
   method filaDeAterrizajeEn(tablero) {
@@ -145,7 +145,7 @@ class FichaVoladora inherits FichaComun {
 object sinEquipo {}
 
 class FichaAzul inherits Ficha(jugador = sinEquipo) {
-  method tipo() = "azul"
+  override method tipo() = "azul"
   method image() = "azul.png"
 
   override method aterrizar(tablero) {
