@@ -96,7 +96,7 @@ object partida {
   // Cambiar de tipo de ficha (solo si el reparto lo permite): se saca la que flotaba y se
   // pone la nueva en el mismo lugar.
   method elegir(ficha) {
-    if (self.puedeJugarElHumano() && reparto.permiteElegir() && ficha!=fichaEnMano) {
+    if (self.puedeJugarElHumano() && reparto.permiteElegir()) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(ficha)
     }
