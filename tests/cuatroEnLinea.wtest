@@ -34,14 +34,14 @@ describe "Fichas en el tablero" {
     self.colocar(a, 3)
     self.colocar(b, 3)
     self.colocar(c, 3) // columna con altura 3: la próxima fantasma ya puede atravesar sus 2 y reemplazar
-    const fantasma = new FichaFantasma(jugador = amarillo)
+    const fantasma = new FichaFantasma(jugador = amarillo, atraviesa = 2)
     self.colocar(fantasma, 3)
     assert.equals([b, c, fantasma], tablero.fichasApoyadasEn(3))
   }
 
   test "si la columna no tiene suficientes fichas para atravesar, la fantasma cae como una común" {
     self.colocar(new FichaComun(jugador = rojo), 3)
-    const fantasma = new FichaFantasma(jugador = amarillo)
+    const fantasma = new FichaFantasma(jugador = amarillo, atraviesa = 1)
     self.colocar(fantasma, 3)
     assert.equals(2, tablero.alturaDe(3))
     assert.equals(1, fantasma.position().y())
@@ -50,7 +50,7 @@ describe "Fichas en el tablero" {
   test "el mismo mensaje filaDeAterrizajeEn da una fila distinta según el tipo de ficha" {
     3.times({ n => self.colocar(new FichaComun(jugador = rojo), 4) }) // columna con altura 3
     const comun = new FichaComun(jugador = rojo)
-    const fantasma = new FichaFantasma(jugador = rojo)
+    const fantasma = new FichaFantasma(jugador = rojo, atraviesa = 2)
     comun.position(game.at(4, tablero.filas()))
     fantasma.position(game.at(4, tablero.filas()))
     assert.equals([3, 0], [comun, fantasma].map({ ficha => ficha.filaDeAterrizajeEn(tablero) }))
