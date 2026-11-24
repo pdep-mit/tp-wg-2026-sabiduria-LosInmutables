@@ -88,7 +88,7 @@ object partida {
   method parpadearSombra() {
     if (game.hasVisual(sombraDelFantasma)) {
       game.removeVisual(sombraDelFantasma)
-    } else if (game.hasVisual(fichaEnMano) && fichaEnMano.reemplaza() && self.puedeJugarElHumano()) {
+    } else if (game.hasVisual(fichaEnMano) && self.puedeJugarElHumano()) {
       game.addVisual(sombraDelFantasma)
     }
   }
@@ -96,7 +96,7 @@ object partida {
   // Cambiar de tipo de ficha (solo si el reparto lo permite): se saca la que flotaba y se
   // pone la nueva en el mismo lugar.
   method elegir(ficha) {
-    if (self.puedeJugarElHumano() && reparto.permiteElegir()) {
+    if (self.puedeJugarElHumano() && reparto.permiteElegir() && ficha!=fichaEnMano) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(ficha)
     }
