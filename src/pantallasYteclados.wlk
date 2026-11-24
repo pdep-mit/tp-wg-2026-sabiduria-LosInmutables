@@ -156,6 +156,7 @@ class PantallaConOpciones inherits Pantalla {
 // Lo que van decidiendo los jugadores y después consume la pantalla de juego / la partida.
 object configuracion {
   var property modo = modoContraCPU
+  var property reparto = sorteoDeFichas
   var property escenario = escenarioClasico
 }
 
@@ -230,15 +231,41 @@ object pantallaSeleccionModo inherits Pantalla {
   // Jugador 1 confirma
   override method teclaEspacio() {
     configuracion.modo(modoElegido)
+    navegador.irA(pantallaSeleccionFichas)
+  }
+}
+
+//==================[Pantalla: selección de fichas]==================
+// Cómo se reparten las fichas: al azar (a cada turno toca una) o a elección (con C, F, B y V).
+// Igual que el menú inicial: dos opciones de 2 columnas, en las columnas 0-1 y 4-5, y un selector.
+// Cada opción guarda el reparto que representa (ver sorteoDeFichas y eleccionDeFichas).
+class OpcionDeFichas {
+  const columna
+  const property image
+  const reparto
+
+  method position() = game.at(columna, 2)
+
+  method elegir() {
+    configuracion.reparto(reparto)
     navegador.irA(pantallaSeleccionTablero)
   }
 }
 
+object opcionFichasAlAzar inherits OpcionDeFichas(columna = 0, image = "opcion-fichas-azar.png", reparto = sorteoDeFichas) {}
+
+object opcionFichasAElegir inherits OpcionDeFichas(columna = 4, image = "opcion-fichas-elegir.png", reparto = eleccionDeFichas) {}
+
+object pantallaSeleccionFichas inherits PantallaConOpciones(
+  selector = new Selector(opciones = [opcionFichasAlAzar, opcionFichasAElegir], image = "cursor.png")
+) {
+  override method fondo() = "seleccion-fichas.png"
+}
+
 //==================[Pantalla: selección de tablero]==================
-// Cada opción es un Escenario (miniatura + nombre + fondo del juego).
+// Cada opción es un Escenario (miniatura + fondo del juego).
 // Igual que el menú: las miniaturas ocupan 3 columnas y van en las columnas 0-2 y 4-6.
 class Escenario {
-  const property nombre
   const property fondo
   const property image
   const columna
@@ -252,9 +279,9 @@ class Escenario {
   }
 }
 
-object escenarioClasico inherits Escenario(nombre = "Clásico", fondo = "tablero.png", image = "mini-clasico.png", columna = 0, fila = 3) {}
+object escenarioClasico inherits Escenario(fondo = "tablero.png", image = "mini-clasico.png", columna = 0, fila = 3) {}
 
-object escenarioNoche inherits Escenario(nombre = "Noche", fondo = "tablero-noche.png", image = "mini-noche.png", columna = 4, fila = 3) {}
+object escenarioNoche inherits Escenario(fondo = "tablero-noche.png", image = "mini-noche.png", columna = 4, fila = 3) {}
 
 object pantallaSeleccionTablero inherits Pantalla {
   const escenarios = [escenarioClasico, escenarioNoche]
@@ -263,8 +290,10 @@ object pantallaSeleccionTablero inherits Pantalla {
 
   override method fondo() = "seleccion-tablero.png"
 
+  method hayJugador2() = configuracion.modo().hayJugador2()
+
   override method visuales() =
-    if (configuracion.modo().hayJugador2()) escenarios + [selectorJugador1, selectorJugador2]
+    if (self.hayJugador2()) escenarios + [selectorJugador1, selectorJugador2]
     else escenarios + [selectorJugador1]
 
   override method mostrar() {
@@ -280,13 +309,13 @@ object pantallaSeleccionTablero inherits Pantalla {
 
   // Jugador 2 (solo si el modo lo tiene): flechas + Enter
   override method teclaIzquierda() {
-    if (configuracion.modo().hayJugador2()) { selectorJugador2.anterior() }
+    if (self.hayJugador2()) { selectorJugador2.anterior() }
   }
   override method teclaDerecha() {
-    if (configuracion.modo().hayJugador2()) { selectorJugador2.siguiente() }
+    if (self.hayJugador2()) { selectorJugador2.siguiente() }
   }
   override method teclaEnter() {
-    if (configuracion.modo().hayJugador2()) { selectorJugador2.actual().elegir() }
+    if (self.hayJugador2()) { selectorJugador2.actual().elegir() }
   }
 }
 
@@ -300,6 +329,7 @@ object pantallaJuego inherits Pantalla {
     super()
     partida.reiniciar()
     partida.contraCPU(!configuracion.modo().hayJugador2())
+    partida.reparto(configuracion.reparto())
   }
 
   override method ocultar() {
@@ -313,11 +343,11 @@ object pantallaJuego inherits Pantalla {
   override method teclaDerecha() { partida.desplazarDerecha() }
   override method teclaEspacio() { partida.soltar() }
   override method teclaEnter() { partida.soltar() }
-  // C, F, B y V solo sirven si las fichas no se sortean (ver sorteoDeFichas)
-  override method teclaC() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirComun() } }
-  override method teclaF() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirFantasma() } }
-  override method teclaB() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirBomba() } }
-  override method teclaV() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirVoladora() } }
+  // C, F, B y V solo sirven si el reparto permite elegir (la partida lo controla)
+  override method teclaC() { partida.elegirComun() }
+  override method teclaF() { partida.elegirFantasma() }
+  override method teclaB() { partida.elegirBomba() }
+  override method teclaV() { partida.elegirVoladora() }
   override method teclaR() { partida.reiniciar() }
 
   // No se sale mientras hay una ficha cayendo (si no, al aterrizar aparecería el cartel en otra pantalla).

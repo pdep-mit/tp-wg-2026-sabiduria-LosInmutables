@@ -160,3 +160,9 @@ object sorteoDeFichas {
     return bolsa.anyOne().apply()
   }
 }
+// A elección: cada turno empieza con una común y el jugador cambia de tipo con C, F, B y V.
+object eleccionDeFichas {
+  method permiteElegir() = true
+
+  method fichaPara(jugador) = new FichaComun(jugador = jugador)
+}

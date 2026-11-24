@@ -26,6 +26,8 @@ object partida {
   var property contraCPU = false
   // Columna sobre la que "flota" la ficha en mano (fila extra, arriba del tablero).
   var columnaActual = 3
+  // Cómo se reparten las fichas en cada turno (también la elige pantallaJuego al mostrarse).
+  var property reparto = eleccionDeFichas
 
   method jugadorActual() = jugadorActual
 
