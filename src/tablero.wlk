@@ -57,10 +57,27 @@ class Tablero {
 
   method columnasLibres() = (0..columnas - 1).filter({ columna => !self.columnaLlena(columna) })
 
-  // ¿Ganaría el jugador si soltara una ficha común en esa columna? Se prueba con una ficha
-  // que no se agrega al tablero, así que no cambia nada.
-  method ganaSiSueltaEn(jugador, columna) =
-    self.formaCuatroEnLinea(new FichaComun(jugador = jugador, position = game.at(columna, self.alturaDe(columna))))
+  // Las columnas donde se puede soltar esa ficha: las que reemplazan fichas (fantasma y bomba)
+  // pueden caer también en una columna llena.
+  method columnasDondePuedeSoltar(ficha) =
+    if (ficha.reemplaza()) (0..columnas - 1) else self.columnasLibres()
+
+  // Las columnas donde el jugador, soltando una ficha común, armaría una línea de ese largo o más.
+  method columnasQueArman(jugador, largo) =
+    self.columnasLibres().filter({ columna => self.armaLineaEn(jugador, columna, largo) })
+
+  // Se prueba con una ficha que no se agrega al tablero, así que no cambia nada.
+  method armaLineaEn(jugador, columna, largo) =
+    self.formaLineaDe(new FichaComun(jugador = jugador, position = game.at(columna, self.alturaDe(columna))), largo)
+
+  // Para que la CPU pruebe jugadas: un tablero igual a este (con copias de sus fichas) en el que
+  // se suelta una copia de la ficha, y se devuelve para ver cómo habría quedado. Este tablero no se toca.
+  method despuesDeSoltar(ficha, columna) {
+    const prueba = new TableroHipotetico()
+    fichas.forEach({ otra => prueba.agregar(otra.copia()) })
+    prueba.soltar(ficha, columna)
+    return prueba
+  }
 
   method hayFichaCayendo() = fichas.any({ ficha => ficha.estaCayendo() })
 
@@ -90,6 +107,19 @@ class Tablero {
     self.destruirEn(bomba.position().x() + 1, bomba.position().y())
   }
 
+  // La ficha (una voladora) quedó en el aire: se llenan con fichas azules las celdas que tiene
+  // debajo, desde la última ficha de su columna hasta ella.
+  method sostener(ficha) {
+    const columna = ficha.position().x()
+    const debajo = self.cantidadDebajoDe(ficha)
+    (ficha.position().y() - debajo).times({ i => self.agregarVisible(new FichaAzul(position = game.at(columna, debajo + i - 1))) })
+  }
+
+  method agregarVisible(ficha) {
+    game.addVisual(ficha)
+    self.agregar(ficha)
+  }
+
   method destruirEn(x, y) {
     const ficha = self.fichaApoyadaEn(x, y)
     if (ficha != null) {
@@ -116,9 +146,13 @@ class Tablero {
   method revisarGanador(ficha) {
     if (!self.hayGanador() && self.formaCuatroEnLinea(ficha)) {
       ganador = ficha.jugador()
-      cartelDeVictoria.ganador(ganador)
-      game.addVisual(cartelDeVictoria)
+      self.mostrarCartelDeVictoria()
     }
+  }
+
+  method mostrarCartelDeVictoria() {
+    cartelDeVictoria.ganador(ganador)
+    game.addVisual(cartelDeVictoria)
   }
 
   // Si se llenó el tablero y nadie ganó, es empate: no se puede soltar ninguna ficha más.
@@ -141,13 +175,15 @@ class Tablero {
     empate = false
   }
 
-  // Hay 4 en línea si, para alguna de las 4 direcciones (horizontal, vertical y las dos
-  // diagonales), la ficha tiene 3 o más fichas propias seguidas, contando para los dos lados.
-  method formaCuatroEnLinea(ficha) =
-    self.cantidadEnLinea(ficha, 1, 0) >= 4 ||  // horizontal
-    self.cantidadEnLinea(ficha, 0, 1) >= 4 ||  // vertical
-    self.cantidadEnLinea(ficha, 1, 1) >= 4 ||  // diagonal ascendente ( / )
-    self.cantidadEnLinea(ficha, 1, -1) >= 4    // diagonal descendente ( \ )
+  method formaCuatroEnLinea(ficha) = self.formaLineaDe(ficha, 4)
+
+  // Hay una línea de ese largo si, para alguna de las 4 direcciones (horizontal, vertical y las dos
+  // diagonales), la ficha tiene seguidas ese largo de fichas propias (contándola), mirando para los dos lados.
+  method formaLineaDe(ficha, largo) =
+    self.cantidadEnLinea(ficha, 1, 0) >= largo ||  // horizontal
+    self.cantidadEnLinea(ficha, 0, 1) >= largo ||  // vertical
+    self.cantidadEnLinea(ficha, 1, 1) >= largo ||  // diagonal ascendente ( / )
+    self.cantidadEnLinea(ficha, 1, -1) >= largo    // diagonal descendente ( \ )
 
   // dx y dy son cuánto se mueve en x y en y para ir "hacia ese lado" (por ejemplo, dx=1 dy=0
   // es ir a la derecha). La línea completa es la ficha misma, más lo que sigue hacia ese lado,
@@ -168,7 +204,46 @@ class Tablero {
 
   // La ficha apoyada en esa posición, o null si no hay ninguna (incluye posiciones fuera del tablero).
   method fichaApoyadaEn(x, y) {
-    const encontradas = fichas.filter({ ficha => ficha.estaApoyada() && ficha.estaEn(game.at(x, y)) })
+    const celda = game.at(x, y)
+    const encontradas = fichas.filter({ ficha => ficha.estaEn(celda) && ficha.estaApoyada() })
     return if (encontradas.isEmpty()) null else encontradas.first()
   }
+}
+
+// Tablero para probar jugadas (lo usa la CPU): hace lo mismo que el Tablero, pero sin mostrar
+// nada en pantalla: la ficha queda de una en su lugar en vez de caer, lo que se cae por una bomba
+// también baja de una, y no aparecen carteles.
+class TableroHipotetico inherits Tablero {
+  override method soltar(ficha, columna) {
+    ficha.position(game.at(columna, 0))   // primero la columna: de ahí la ficha calcula su fila
+    ficha.position(game.at(columna, ficha.filaDeAterrizajeEn(self)))
+    self.agregar(ficha)
+    ficha.aterrizar(self)
+  }
+
+  // Las fichas flotantes bajan una celda a la vez hasta apoyarse; después se revisa si alguna
+  // de las que bajó armó un 4 en línea (la primera que se encuentre es la ganadora).
+  override method bajarFichasFlotantes() {
+    const flotantes = fichas.filter({ ficha => self.estaFlotando(ficha) })
+    self.bajarHastaApoyar(flotantes)
+    flotantes.forEach({ ficha => self.revisarGanador(ficha) })
+  }
+
+  method estaFlotando(ficha) = self.cantidadDebajoDe(ficha) < ficha.position().y()
+
+  method bajarHastaApoyar(flotantes) {
+    const siguenFlotando = flotantes.filter({ ficha => self.estaFlotando(ficha) })
+    if (!siguenFlotando.isEmpty()) {
+      siguenFlotando.forEach({ ficha => ficha.bajar() })
+      self.bajarHastaApoyar(siguenFlotando)
+    }
+  }
+
+  override method agregarVisible(ficha) {
+    self.agregar(ficha)
+  }
+
+  override method mostrarCartelDeVictoria() {}
+
+  override method revisarEmpate() {}
 }

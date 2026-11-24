@@ -1,5 +1,6 @@
 import wollok.game.*
 import partida.*
+import fichas.*
 
 //==================[Fondo]==================
 // El fondo es un visual más (a pantalla completa) que muestra el fondo de la pantalla actual.
@@ -64,6 +65,7 @@ object teclado {
     keyboard.c().onPressDo({ navegador.pantallaActual().teclaC() })
     keyboard.f().onPressDo({ navegador.pantallaActual().teclaF() })
     keyboard.b().onPressDo({ navegador.pantallaActual().teclaB() })
+    keyboard.v().onPressDo({ navegador.pantallaActual().teclaV() })
     keyboard.r().onPressDo({ navegador.pantallaActual().teclaR() })
   }
 }
@@ -95,6 +97,7 @@ class Pantalla {
   method teclaC() {}
   method teclaF() {}
   method teclaB() {}
+  method teclaV() {}
   method teclaR() {}
 
   // Por defecto, backspace vuelve a la pantalla anterior (en el menú inicial no hay a dónde volver).
@@ -310,9 +313,11 @@ object pantallaJuego inherits Pantalla {
   override method teclaDerecha() { partida.desplazarDerecha() }
   override method teclaEspacio() { partida.soltar() }
   override method teclaEnter() { partida.soltar() }
-  override method teclaC() { partida.elegirComun() }
-  override method teclaF() { partida.elegirFantasma() }
-  override method teclaB() { partida.elegirBomba() }
+  // C, F, B y V solo sirven si las fichas no se sortean (ver sorteoDeFichas)
+  override method teclaC() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirComun() } }
+  override method teclaF() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirFantasma() } }
+  override method teclaB() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirBomba() } }
+  override method teclaV() { if (!sorteoDeFichas.fichasAlAzar()) { partida.elegirVoladora() } }
   override method teclaR() { partida.reiniciar() }
 
   // No se sale mientras hay una ficha cayendo (si no, al aterrizar aparecería el cartel en otra pantalla).

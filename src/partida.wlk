@@ -33,6 +33,11 @@ object partida {
   // el tablero queda congelado: ni se mueve la ficha en mano, ni se elige otro tipo, ni se suelta.
   method jugando() = !tablero.hayGanador() && !tablero.hayEmpate()
 
+  // Columna en la que está la ficha en mano; después de soltar, es la de la última jugada del humano.
+  method columnaActual() = columnaActual
+
+  method jugadorRival() = if (jugadorActual == jugadorRojo) jugadorAmarillo else jugadorRojo
+
   method turnoDeLaCPU() = contraCPU && jugadorActual == jugadorAmarillo
 
   // Las teclas solo andan si la partida sigue y no le toca a la CPU.
@@ -47,7 +52,7 @@ object partida {
   }
 
   // Vuelve a dejar la partida como al principio: tablero vacío, sin ganador,
-  // el turno para el rojo y una ficha común nueva en mano.
+  // el turno para el rojo y una ficha común nueva en mano (la primera de la partida siempre es común).
   method reiniciar() {
     game.removeVisual(fichaEnMano)
     tablero.reiniciar()
@@ -80,7 +85,7 @@ object partida {
   method parpadearSombra() {
     if (game.hasVisual(sombraDelFantasma)) {
       game.removeVisual(sombraDelFantasma)
-    } else if (game.hasVisual(fichaEnMano) && fichaEnMano.reemplaza() && self.jugando()) {
+    } else if (game.hasVisual(fichaEnMano) && fichaEnMano.reemplaza() && self.puedeJugarElHumano()) {
       game.addVisual(sombraDelFantasma)
     }
   }
@@ -104,6 +109,13 @@ object partida {
     if (self.puedeJugarElHumano()) {
       game.removeVisual(fichaEnMano)
       self.ponerEnMano(new FichaBomba(jugador = jugadorActual))
+    }
+  }
+
+  method elegirVoladora() {
+    if (self.puedeJugarElHumano()) {
+      game.removeVisual(fichaEnMano)
+      self.ponerEnMano(new FichaVoladora(jugador = jugadorActual))
     }
   }
 
@@ -143,7 +155,7 @@ object partida {
     } else {
       jugadorActual = jugadorRojo
     }
-    self.ponerEnMano(new FichaComun(jugador = jugadorActual))
+    self.ponerEnMano(sorteoDeFichas.fichaPara(jugadorActual))
     if (self.turnoDeLaCPU()) {
       cpu.jugar()
     }

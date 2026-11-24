@@ -59,6 +59,8 @@ class FichaComun inherits Ficha {
   method image() = self.imagenDe("comun")
   method reemplaza() = false
   method filaDeAterrizajeEn(tablero) = self.alturaDeSuColumnaEn(tablero)
+  // Una ficha igual, para que la CPU pruebe jugadas sin tocar la verdadera.
+  method copia() = new FichaComun(jugador = jugador, position = position)
 }
 
 // Ficha fantasma: atraviesa las primeras `atraviesa` fichas de la columna (contando desde arriba)
@@ -74,6 +76,7 @@ class FichaFantasma inherits Ficha {
     const altura = self.alturaDeSuColumnaEn(tablero)
     return if (altura > atraviesa) altura - 1 - atraviesa else altura
   }
+  method copia() = new FichaFantasma(jugador = jugador, position = position, atraviesa = atraviesa)
 }
 
 // Ficha bomba: reemplaza la ficha de arriba de la columna (por eso se puede soltar aunque
@@ -86,9 +89,74 @@ class FichaBomba inherits FichaComun {
 
   override method filaDeAterrizajeEn(tablero) = (self.alturaDeSuColumnaEn(tablero) - 1).max(0)
 
+  override method copia() = new FichaBomba(jugador = jugador, position = position)
+
   override method aterrizar(tablero) {
     tablero.romperAlLadoDe(self)
     super(tablero)
     tablero.bajarFichasFlotantes()
+  }
+}
+
+// Ficha voladora: aparece en el aire, `vuela` celdas por encima de lo que hay en la columna
+// (se sortea al crearla, de 1 a 5, y no pasa del borde de arriba). Como no puede quedar flotando,
+// al llegar el tablero le pone abajo las fichas azules que la sostienen. Después queda como una común.
+class FichaVoladora inherits FichaComun {
+  const vuela = (1..5).anyOne()
+
+  override method image() = self.imagenDe("voladora")
+
+  override method filaDeAterrizajeEn(tablero) = (self.alturaDeSuColumnaEn(tablero) + vuela).min(tablero.filas() - 1)
+
+  override method aterrizar(tablero) {
+    tablero.sostener(self)
+    super(tablero)
+  }
+
+  override method copia() = new FichaVoladora(jugador = jugador, position = position, vuela = vuela)
+}
+
+// Las fichas azules no son de ningún equipo: solo sostienen a la voladora y tapan lugar.
+// Nunca arman línea (ni cuentan para nadie), por eso al llegar no se revisa si ganó.
+object sinEquipo {}
+
+class FichaAzul inherits Ficha(jugador = sinEquipo) {
+  method image() = "azul.png"
+
+  override method aterrizar(tablero) {
+    cayendo = false
+  }
+
+  method copia() = new FichaAzul(position = position)
+}
+
+// Sorteo de la ficha que le toca a cada jugador en su turno. Funciona como una bolsa: tiene
+// tantas fichas de cada tipo como su peso, y se saca una al azar. Cuanto más alto el peso,
+// más seguido toca (la probabilidad es el peso dividido por la suma de todos).
+// Para sumar una ficha nueva: un peso nuevo y una línea más en sacarDeLaBolsa.
+object sorteoDeFichas {
+  // true: a cada turno toca una ficha al azar y no se puede elegir (teclas C, F, B y V apagadas).
+  // false: cada turno empieza con una común y se elige a mano con C, F, B y V.
+  const property fichasAlAzar = true
+  const pesoComun = 7
+  const pesoFantasma = 2
+  const pesoBomba = 1
+  const pesoVoladora = 1
+
+  method fichaPara(jugador) {
+    if (fichasAlAzar) {
+      return self.sacarDeLaBolsa(jugador)
+    } else {
+      return new FichaComun(jugador = jugador)
+    }
+  }
+
+  method sacarDeLaBolsa(jugador) {
+    const bolsa = []
+    pesoComun.times({ i => bolsa.add({ new FichaComun(jugador = jugador) }) })
+    pesoFantasma.times({ i => bolsa.add({ new FichaFantasma(jugador = jugador) }) })
+    pesoBomba.times({ i => bolsa.add({ new FichaBomba(jugador = jugador) }) })
+    pesoVoladora.times({ i => bolsa.add({ new FichaVoladora(jugador = jugador) }) })
+    return bolsa.anyOne().apply()
   }
 }
