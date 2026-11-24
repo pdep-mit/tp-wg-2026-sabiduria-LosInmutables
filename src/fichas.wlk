@@ -99,10 +99,10 @@ class FichaBomba inherits FichaComun {
 }
 
 // Ficha voladora: aparece en el aire, `vuela` celdas por encima de lo que hay en la columna
-// (se sortea al crearla, de 1 a 5, y no pasa del borde de arriba). Como no puede quedar flotando,
+// (se sortea al crearla, de 1 a 3, y no pasa del borde de arriba). Como no puede quedar flotando,
 // al llegar el tablero le pone abajo las fichas azules que la sostienen. Después queda como una común.
 class FichaVoladora inherits FichaComun {
-  const vuela = (1..5).anyOne()
+  const vuela = (1..3).anyOne()
 
   override method image() = self.imagenDe("voladora")
 
