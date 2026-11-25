@@ -68,8 +68,9 @@ class Jugada {
 // Estado jugando: prueba tirar la ficha que le tocó en cada columna posible y se queda
 // con la mejor jugada:
 //  1. si alguna jugada gana, esa;
-//  2. si no, la que arma la línea propia más larga o, si no, tapa una línea del rival;
-//  3. pero siempre una segura: que no le regale la partida al rival.
+//  2. si no, tapar el cuatro en línea del rival;
+//  3. si no, armar su línea de 3 o, si no, tapar la de 3 del rival; y así con las de 2;
+//  4. pero siempre una segura: que no le regale la partida al rival.
 // Si ninguna es segura, ya perdió: tira a cualquier columna.
 object estadoJugando {
   method columnaElegida(tablero, ficha, rival) {
@@ -78,7 +79,7 @@ object estadoJugando {
     if (!ganadoras.isEmpty()) {
       return ganadoras.anyOne().columna()
     } else {
-      const mejor = self.mejorJugada(tablero, jugadas, rival, tablero.largoParaGanar() - 1)
+      const mejor = self.mejorJugada(tablero, jugadas, rival, tablero.largoParaGanar())
       return if (mejor != null) mejor.columna() else jugadas.anyOne().columna()
     }
   }

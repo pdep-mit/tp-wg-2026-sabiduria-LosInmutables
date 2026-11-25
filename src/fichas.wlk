@@ -13,7 +13,7 @@ class Ficha {
   var cayendo = false
   
 
-  const milisegundosPorCelda = 32
+  const milisegundosPorCelda = 129
 
   method estaCayendo() = cayendo
 
